@@ -14,12 +14,12 @@ pub struct Config {
 
 const BASE_URL_KEY: &str = "BASE_URL";
 // const TENANT_KEY: &str = "TENANT";
-const API_URL_KEY: &str = "API_URL";
 const CLIENT_ID_KEY: &str = "CLIENT_ID";
 const CLIENT_SECRET_KEY: &str = "CLIENT_SECRET";
 const SOURCE_FILE_NAME_KEY: &str = "SOURCE_FILE_NAME";
 
 const TOKEN_URL_PATH: &str = "auth/token";
+const API_URL_PATH: &str = "api";
 
 impl Config {
     pub fn load_from_env() -> anyhow::Result<Self> {
@@ -29,7 +29,8 @@ impl Config {
         // let tenant = std::env::var(TENANT_KEY)?;
         let mut token_url = base_url.clone();
         token_url.set_path(TOKEN_URL_PATH);
-        let api_url = Url::try_from(std::env::var(API_URL_KEY)?.as_str())?;
+        let mut api_url = base_url.clone();
+        api_url.set_path(API_URL_PATH);
         let client_id = std::env::var(CLIENT_ID_KEY)?;
         let client_secret = std::env::var(CLIENT_SECRET_KEY)?;
         let source_file_name = std::env::var(SOURCE_FILE_NAME_KEY)?;
