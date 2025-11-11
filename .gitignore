@@ -4,3 +4,4 @@ Cargo.lock
 *.csv
 example_field_post.jsonc
 logs/
+.vscode
