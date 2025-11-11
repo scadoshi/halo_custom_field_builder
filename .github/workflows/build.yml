@@ -23,6 +23,10 @@ jobs:
           - os: macos-latest
             target: aarch64-apple-darwin
             artifact_name: halo_custom_field_builder-macos-arm
+            
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact_name: halo_custom_field_builder-linux
 
     runs-on: ${{ matrix.os }}
     
@@ -49,21 +53,41 @@ jobs:
       - name: build release
         run: cargo build --release --target ${{ matrix.target }}
         
-      - name: prepare artifact (windows)
+      - name: create distribution package (windows)
         if: matrix.os == 'windows-latest'
         run: |
-          cp target/${{ matrix.target }}/release/${{ matrix.artifact_name }} ${{ matrix.artifact_name }}
+          mkdir dist
+          cp target/${{ matrix.target }}/release/halo_custom_field_builder.exe dist/
+          cp README.md dist/
+          cp source.csv dist/
+          cp .env.template dist/
           
-      - name: prepare artifact (macos)
-        if: matrix.os == 'macos-latest'
+      - name: create distribution package (macos/linux)
+        if: matrix.os == 'macos-latest' || matrix.os == 'ubuntu-latest'
         run: |
-          cp target/${{ matrix.target }}/release/halo_custom_field_builder ${{ matrix.artifact_name }}
-          chmod +x ${{ matrix.artifact_name }}
+          mkdir dist
+          cp target/${{ matrix.target }}/release/halo_custom_field_builder dist/
+          chmod +x dist/halo_custom_field_builder
+          cp README.md dist/
+          cp source.csv dist/
+          cp .env.template dist/
+          
+      - name: create zip archive (windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd dist
+          7z a -tzip ../halo_custom_field_builder-windows.zip *
+          
+      - name: create zip archive (macos/linux)
+        if: matrix.os == 'macos-latest' || matrix.os == 'ubuntu-latest'
+        run: |
+          cd dist
+          zip -r ../halo_custom_field_builder-${{ matrix.target }}.zip *
           
       - name: upload artifact
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ matrix.artifact_name }}
-          path: ${{ matrix.artifact_name }}
+          name: halo_custom_field_builder-${{ matrix.target }}
+          path: halo_custom_field_builder-*.zip
           if-no-files-found: error
 
