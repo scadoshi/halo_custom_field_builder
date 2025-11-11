@@ -228,13 +228,14 @@ the program includes a debug mode that allows you to:
 
 the program distribution includes:
 
-| file/folder                     | purpose                     | notes                                        |
-| ------------------------------- | --------------------------- | -------------------------------------------- |
-| `halo_custom_field_builder.exe` | main executable             | core program                                 |
-| `.env.example`                  | template configuration file | rename to `.env` and update with your values |
-| `source.csv`                    | your input CSV file         | must match the name specified in `.env`      |
-| `logs/`                         | directory for log files     | created automatically on first run           |
-| `README.md`                     | documentation               | contains setup and usage instructions        |
+| file/folder                     | purpose                 | notes                                 |
+| ------------------------------- | ----------------------- | ------------------------------------- |
+| `halo_custom_field_builder.exe` | main executable         | core program                          |
+| `source.csv`                    | sample input CSV file   | example with all field types          |
+| `README.md`                     | documentation           | contains setup and usage instructions |
+| `logs/`                         | directory for log files | created automatically on first run    |
+
+**note:** you will need to create your own `.env` file (see configuration section above)
 
 ### file locations
 

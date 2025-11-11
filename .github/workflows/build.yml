@@ -60,7 +60,6 @@ jobs:
           cp target/${{ matrix.target }}/release/halo_custom_field_builder.exe dist/
           cp README.md dist/
           cp source.csv dist/
-          cp .env.example dist/
           
       - name: create distribution package (macos/linux)
         if: matrix.os == 'macos-latest' || matrix.os == 'ubuntu-latest'
@@ -70,7 +69,6 @@ jobs:
           chmod +x dist/halo_custom_field_builder
           cp README.md dist/
           cp source.csv dist/
-          cp .env.example dist/
           
       - name: create zip archive (windows)
         if: matrix.os == 'windows-latest'
