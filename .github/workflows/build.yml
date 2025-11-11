@@ -1,0 +1,69 @@
+name: build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_name: halo_custom_field_builder.exe
+            
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact_name: halo_custom_field_builder-macos-intel
+            
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact_name: halo_custom_field_builder-macos-arm
+
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v4
+        
+      - name: setup rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+          
+      - name: cache cargo
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          
+      - name: build release
+        run: cargo build --release --target ${{ matrix.target }}
+        
+      - name: prepare artifact (windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          cp target/${{ matrix.target }}/release/${{ matrix.artifact_name }} ${{ matrix.artifact_name }}
+          
+      - name: prepare artifact (macos)
+        if: matrix.os == 'macos-latest'
+        run: |
+          cp target/${{ matrix.target }}/release/halo_custom_field_builder ${{ matrix.artifact_name }}
+          chmod +x ${{ matrix.artifact_name }}
+          
+      - name: upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_name }}
+          if-no-files-found: error
+
