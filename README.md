@@ -25,19 +25,17 @@ CLI tool for bulk creation of custom fields in Halo using CSV input. built with 
 
 create a `.env` file in the same directory as the executable:
 
-| variable           | required | description                       |
-| ------------------ | -------- | --------------------------------- |
-| `BASE_URL`         | yes      | Halo instance URL (HTTPS only)   |
-| `API_URL`          | yes      | full API endpoint URL             |
-| `CLIENT_ID`        | yes      | OAuth 2.0 client identifier       |
-| `CLIENT_SECRET`    | yes      | OAuth 2.0 client secret           |
-| `SOURCE_FILE_NAME` | yes      | CSV input filename                |
+| variable           | required | description                     |
+| ------------------ | -------- | ------------------------------- |
+| `BASE_URL`         | yes      | Halo instance URL (HTTPS only) |
+| `CLIENT_ID`        | yes      | OAuth 2.0 client identifier     |
+| `CLIENT_SECRET`    | yes      | OAuth 2.0 client secret         |
+| `SOURCE_FILE_NAME` | yes      | CSV input filename              |
 
 ### example configuration
 
 ```env
 BASE_URL=https://your-instance.halo.com
-API_URL=https://your-instance.halo.com/api
 CLIENT_ID=dd5ef51d-ec0f-4247-b79d-1234b0e40dec
 CLIENT_SECRET=8595ec7e-81e5-4a17-1234-6c3ae166e0c7
 SOURCE_FILE_NAME=source.csv
@@ -45,7 +43,8 @@ SOURCE_FILE_NAME=source.csv
 
 **notes:**
 - do not use quotes around values
-- URLs must use HTTPS
+- BASE_URL must use HTTPS
+- API and auth URLs are automatically generated from BASE_URL
 - file must be in same directory as executable
 
 ## CSV format
