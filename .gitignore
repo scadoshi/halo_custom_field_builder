@@ -1,6 +1,5 @@
 /target
 .env
 Cargo.lock
-example_field_post.jsonc
 logs/
 .vscode
