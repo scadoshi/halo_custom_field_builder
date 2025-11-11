@@ -1,6 +1,6 @@
 # halo custom field builder
 
-CLI tool for bulk creation of custom fields in Halo PSA using CSV input. built with Rust.
+CLI tool for bulk creation of custom fields in Halo using CSV input. built with Rust.
 
 ## features
 
