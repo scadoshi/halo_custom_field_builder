@@ -1,315 +1,270 @@
-# Halo Custom Field Builder
+# halo custom field builder
 
-A CLI tool for bulk creation of custom fields in Halo using a CSV file.
+CLI tool for bulk creation of custom fields in Halo PSA using CSV input. built with Rust.
 
-## Current Status
+## features
 
-- ✅ Environment configuration validation
-- ✅ CSV input validation with detailed error messages
-- ✅ JSON transformation with Halo API format
-- ✅ API integration with authentication
-- ✅ Debug mode for field-by-field processing
-- ✅ Comprehensive logging system
-- ✅ Error handling and reporting
+- environment configuration validation with clear error messages
+- CSV input validation against Halo field requirements  
+- type-safe domain models with compile-time guarantees
+- OAuth 2.0 authentication with automatic token refresh
+- rate-limited API requests (500ms between calls)
+- interactive debug mode for field-by-field review
+- automatic log rotation (7 days retention, max 100 files)
+- detailed error context for troubleshooting
 
-## Features
+## requirements
 
-- Validates environment configuration (URLs, credentials, file paths)
-- Validates CSV field definitions against Halo's requirements
-- Transforms validated fields to Halo API JSON format
-- Provides clear error messages for configuration and data issues
-- Supports OAuth2.0 authentication with Halo API
-- Includes debug mode for careful field review
-- Maintains detailed operation logs with automatic rotation
-- Offers both bulk import and field-by-field processing
+- `.env` configuration file
+- CSV input file with proper column headers
+- no additional runtime dependencies (standalone executable)
 
-## About
+## configuration
 
-A CLI tool for bulk creation of custom fields in Halo using a CSV file. Built with Rust.
+### environment variables
 
-## Requirements
+create a `.env` file in the same directory as the executable:
 
-- Valid `.env` configuration file
-- Properly formatted CSV input file
+| variable           | required | description                       |
+| ------------------ | -------- | --------------------------------- |
+| `BASE_URL`         | yes      | Halo instance URL (HTTPS only)   |
+| `API_URL`          | yes      | full API endpoint URL             |
+| `CLIENT_ID`        | yes      | OAuth 2.0 client identifier       |
+| `CLIENT_SECRET`    | yes      | OAuth 2.0 client secret           |
+| `SOURCE_FILE_NAME` | yes      | CSV input filename                |
 
-That's it! The program is distributed as a standalone executable, so no additional runtime dependencies are required.
-
-## Setup Guide
-
-### Environment Setup
-
-Create a `.env` file in your project root with the following configuration:
-
-
-| Variable           | Required | Description                | Format Requirements                                                                                                                      |
-| -------------------- | ---------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `BASE_URL`         | Yes      | Halo instance URL          | Must start with 'https://' and contain only the base domain (e.g., 'https://test.halo.com'). Do not include paths like '/api' or '/auth' |
-| `TENANT`           | No       | Halo tenant name           | Can be empty for on-premise installations                                                                                                |
-| `CLIENT_ID`        | Yes      | OAuth2.0 client identifier | Cannot be empty                                                                                                                          |
-| `CLIENT_SECRET`    | Yes      | OAuth2.0 client secret     | Cannot be empty                                                                                                                          |
-| `SOURCE_FILE_NAME` | Yes      | Input file name            | Cannot be empty                                                                                                                          |
-
-#### Example `.env` Configuration
+### example configuration
 
 ```env
-# Basic Halo instance info
-BASE_URL=https://test.halo.com
-TENANT=test
-
-# API Application info
+BASE_URL=https://your-instance.halo.com
+API_URL=https://your-instance.halo.com/api
 CLIENT_ID=dd5ef51d-ec0f-4247-b79d-1234b0e40dec
-CLIENT_SECRET=8595ec7e-81e5-4a17-1234-6c3ae166e0c7-f65cde17-37da-4cf1-89de-1fdda60d915b
-
-# Source data
+CLIENT_SECRET=8595ec7e-81e5-4a17-1234-6c3ae166e0c7
 SOURCE_FILE_NAME=source.csv
 ```
 
-> **Important Notes**:
->
-> - The `.env` file must exist in the project root
-> - All fields except TENANT must have non-empty values
-> - URLs will be automatically normalized to use HTTPS and remove trailing slashes
-> - Do not use quotes around values in the `.env` file
+**notes:**
+- do not use quotes around values
+- URLs must use HTTPS
+- file must be in same directory as executable
 
-## CSV Configuration
+## CSV format
 
-### Required Columns
+### required columns
 
-The CSV file must include all of these columns with exact names:
+CSV must contain exactly these columns:
 
-- `name`
-- `label`
-- `type_id`
-- `input_type_id`
-- `options`
+```
+name,label,field_type_id,input_type_id,selection_options
+```
 
-### Field Validation Rules
+### column specifications
 
-**name** (Required)
+**name**
+- alphanumeric characters and underscores only
+- no spaces or special characters
+- maximum 64 characters
 
-- Must not be empty
-- Must contain only alphanumeric characters
-- Spaces and special characters are not allowed
+**label**  
+- any visible characters allowed
+- cannot be empty or single space
 
-**label** (Required)
+**field_type_id**
+- valid values: 0, 1, 2, 3, 4, 5, 6, 10
+- see field types table below
 
-- Must not be empty
-- Cannot be a single space
-- Can contain any visible characters
+**input_type_id**
+- depends on field_type_id (see field types table)
+- can be empty for types with no input options
 
-**type_id** (Required)
+**selection_options**
+- required for field_type_id 2 and 3 (selection fields)
+- comma-separated list of choices
+- empty for other field types
 
-- Must be a valid numeric value from the Field Type Reference table
-- Must match one of: 0, 1, 2, 3, 4, 5, 6, 10
+### field type reference
 
-**input_type_id** (Required)
+#### basic field types
 
-- Must be valid for the selected type_id (see Input Options by Field Type)
-- Validation varies by field type:
-  - Text (0): Values 0-6 allowed
-  - Single Selection (2): Values 0-2 allowed
-  - Date (4): Values 0-1 allowed
-  - Others: Must be 0
+| field type         | field_type_id | has input types   |
+| ------------------ | ------------- | ----------------- |
+| text               | 0             | yes               |
+| memo               | 1             | no                |
+| single selection   | 2             | yes               |
+| multiple selection | 3             | no                |
+| date               | 4             | yes               |
+| time               | 5             | no                |
+| checkbox           | 6             | no                |
+| rich               | 10            | no                |
 
-**options** (Conditional)
+#### input options by field type
 
-- Required for Single/Multiple Selection fields (type_id: 2 or 3)
-- Must not be empty for selection fields
-- Format as comma-separated values
-- Optional for all other field types
+**text field input types** (field_type_id: 0)
 
-### Field Type Reference
+| input type   | input_type_id | description                 |
+| ------------ | ------------- | --------------------------- |
+| anything     | 0             | any text input              |
+| integer      | 1             | numbers only                |
+| money        | 2             | currency format             |
+| alphanumeric | 3             | letters and numbers only    |
+| decimal      | 4             | numbers with decimal places |
+| URL          | 5             | web address format          |
+| password     | 6             | masked input field          |
 
-#### Basic Field Types
+**single selection input types** (field_type_id: 2)
 
+| input type        | input_type_id | description           |
+| ----------------- | ------------- | --------------------- |
+| standard dropdown | 0             | basic dropdown menu   |
+| tree dropdown     | 1             | hierarchical dropdown |
+| radio selection   | 2             | radio button options  |
 
-| Field Type         | type_id | Has Input Options |
-| -------------------- | --------- | ------------------- |
-| Text               | 0       | Yes               |
-| Memo               | 1       | No                |
-| Single Selection   | 2       | Yes               |
-| Multiple Selection | 3       | No                |
-| Date               | 4       | Yes               |
-| Time               | 5       | No                |
-| Checkbox           | 6       | No                |
-| Rich               | 10      | No                |
+**date field input types** (field_type_id: 4)
 
-#### Input Options by Field Type
+| input type | input_type_id | description   |
+| ---------- | ------------- | ------------- |
+| date       | 0             | date only     |
+| datetime   | 1             | date and time |
 
-**Text Field Input Types** (type_id: 0)
+**fields with no input options** (always use input_type_id: 0)
 
+- memo (field_type_id: 1)
+- multiple selection (field_type_id: 3)
+- time (field_type_id: 5)
+- checkbox (field_type_id: 6)
+- rich (field_type_id: 10)
 
-| Input Type   | input_type_id | Description                 |
-| -------------- | --------------- | ----------------------------- |
-| Anything     | 0             | Any text input              |
-| Integer      | 1             | Numbers only                |
-| Money        | 2             | Currency format             |
-| Alphanumeric | 3             | Letters and numbers only    |
-| Decimal      | 4             | Numbers with decimal places |
-| URL          | 5             | Web address format          |
-| Password     | 6             | Masked input field          |
+### example fields
 
-**Single Selection Input Types** (type_id: 2)
+sample configuration for a pizza ordering system:
 
+| name                | label                | field_type_id | input_type_id | selection_options                                                                                                                                                                                                           |
+| ------------------- | -------------------- | ------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| orderName           | order name           | 0             | 0             |                                                                                                                                                                                                                             |
+| orderPhone          | phone number         | 0             | 1             |                                                                                                                                                                                                                             |
+| pizzaSize           | pizza size           | 2             | 0             | small,medium,large                                                                                                                                                                                                          |
+| crustType           | crust type           | 2             | 0             | thin,regular,deep dish,stuffed                                                                                                                                                                                              |
+| toppings            | toppings             | 3             | 0             | pepperoni,mushrooms,pineapple,sausage,green peppers,red onions,black olives,bacon,ham,ground beef,italian sausage,spinach,fresh tomatoes,jalapeños,anchovies,chicken,feta,extra mozzarella,roasted garlic,artichoke hearts |
+| extraCheese         | extra cheese         | 6             | 0             |                                                                                                                                                                                                                             |
+| specialInstructions | special instructions | 1             | 0             |                                                                                                                                                                                                                             |
+| allergyNotes        | allergy information  | 10            | 0             |                                                                                                                                                                                                                             |
+| deliveryDate        | delivery date        | 4             | 0             |                                                                                                                                                                                                                             |
+| deliveryTime        | preferred time       | 5             | 0             |                                                                                                                                                                                                                             |
+| paymentType         | payment type         | 2             | 2             | cash,card,check                                                                                                                                                                                                             |
+| orderTip            | tip                  | 0             | 4             |                                                                                                                                                                                                                             |
 
-| Input Type        | input_type_id | Description           |
-| ------------------- | --------------- | ----------------------- |
-| Standard dropdown | 0             | Basic dropdown menu   |
-| Tree dropdown     | 1             | Hierarchical dropdown |
-| Radio selection   | 2             | Radio button options  |
+## rate limiting
 
-**Date Field Input Types** (type_id: 4)
+### API constraints
 
+the Halo API implements rate limiting of 700 requests per 5-minute rolling window. to ensure reliable operation and prevent throttling, this program implements a conservative rate limiting strategy:
 
-| Input Type | input_type_id | Description   |
-| ------------ | --------------- | --------------- |
-| Date       | 0             | Date only     |
-| Datetime   | 1             | Date and time |
+- enforces 500ms delay between each field creation request
+- results in approximately 120 requests per minute
+- stays well under the API limit of 700 requests per 5 minutes
+- no manual throttling required
 
-**Fields with No Input Options** (always use input_type_id: 0)
+### processing time estimates
 
-- Memo (type_id: 1)
-- Multiple Selection (type_id: 3)
-- Time (type_id: 5)
-- Checkbox (type_id: 6)
-- Rich (type_id: 10)
+due to rate limiting and API processing time:
 
-### Example Fields
-
-Here's a sample configuration for a pizza ordering system:
-
-
-| name                | label                | type_id | input_type_id | options                                                                                                                                                                                                                     |
-| --------------------- | ---------------------- | --------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| orderName           | Order Name           | 0       | 0             |                                                                                                                                                                                                                             |
-| orderPhone          | Phone Number         | 0       | 1             |                                                                                                                                                                                                                             |
-| pizzaSize           | Pizza Size           | 2       | 0             | Small,Medium,Large                                                                                                                                                                                                          |
-| crustType           | Crust Type           | 2       | 0             | Thin,Regular,Deep Dish,Stuffed                                                                                                                                                                                              |
-| toppings            | Toppings             | 3       | 0             | Pepperoni,Mushrooms,Pineapple,Sausage,Green Peppers,Red Onions,Black Olives,Bacon,Ham,Ground Beef,Italian Sausage,Spinach,Fresh Tomatoes,Jalapeños,Anchovies,Chicken,Feta,Extra Mozzarella,Roasted Garlic,Artichoke Hearts |
-| extraCheese         | Extra Cheese         | 6       | 0             |                                                                                                                                                                                                                             |
-| specialInstructions | Special Instructions | 1       | 0             |                                                                                                                                                                                                                             |
-| allergyNotes        | Allergy Information  | 10      | 0             |                                                                                                                                                                                                                             |
-| deliveryDate        | Delivery Date        | 4       | 0             |                                                                                                                                                                                                                             |
-| deliveryTime        | Preferred Time       | 5       | 0             |                                                                                                                                                                                                                             |
-| paymentType         | Payment Type         | 2       | 2             | Cash,Card,Check                                                                                                                                                                                                             |
-| orderTip            | Tip                  | 0       | 4             |                                                                                                                                                                                                                             |
-
-## Known Limitations
-
-- The program currently only supports field creation (not updating or deleting)
-- All fields are created with default usage and searchable settings
-- Rate limiting is implemented to respect API constraints:
-  - API limit: 700 requests per 5-minute rolling window
-  - Program enforces 500ms delay between requests (~120 requests/minute)
-  - This ensures staying well under the API rate limit while maintaining reliability
-- Batch processing is limited to one field at a time to ensure proper error handling
-
-## Rate Limiting
-
-### API Constraints
-
-The Halo API implements rate limiting of 700 requests per 5-minute rolling window. To ensure reliable operation and prevent throttling, this program implements a conservative rate limiting strategy:
-
-- Enforces a 500ms delay between each field creation request
-- Results in approximately 120 requests per minute
-- Stays well under the API limit of 700 requests per 5 minutes
-- No manual throttling required from the user
-
-### Impact on Processing Time
-
-Due to the rate limiting and API processing time:
-
-- Each field takes approximately 1 second to process (500ms enforced delay + API response time)
+- each field takes approximately 1 second to process (500ms enforced delay + API response time)
 - 100 fields ≈ 2 minutes
 - 500 fields ≈ 10 minutes
 - 1000 fields ≈ 17 minutes (based on actual testing)
 
-Real-world testing with 1000 fields completed in approximately 17 minutes (15:10:34 to 15:27:05), which accounts for:
+real-world testing with 1000 fields completed in approximately 17 minutes, accounting for:
 
-- The 500ms enforced delay between requests
+- 500ms enforced delay between requests
 - Halo API processing time
-- Network latency
-- Response handling
+- network latency
+- response handling
 
-This controlled pacing helps ensure:
+this controlled pacing helps ensure:
 
-- Reliable field creation
-- No API throttling errors
-- Predictable processing times
-- Minimal impact on API performance
+- reliable field creation
+- no API throttling errors
+- predictable processing times
+- minimal impact on API performance
 
-## Error Handling
+## error handling
 
-The program includes comprehensive error handling for:
+the program includes comprehensive error handling for:
 
-- Environment configuration issues
+- environment configuration issues
 - CSV file validation
 - API authentication
-- Field creation failures
+- field creation failures
 
-Each error provides specific details about:
+each error provides specific details about:
 
-- The location of the error (row number for CSV errors)
-- The nature of the problem
-- Suggested fixes where applicable
+- location of the error (row number for CSV errors)
+- nature of the problem
+- suggested fixes where applicable
 
-## Logging
+## logging
 
-The program maintains detailed logs of all operations:
+the program maintains detailed logs of all operations:
 
-- Logs are stored in the `logs` directory
-- Log files are automatically rotated (keeping last 7 days)
-- Maximum of 100 log files are retained
-- Each log includes:
-  - Timestamp
-  - Operation type
-  - Success/failure status
-  - Detailed error messages when applicable
+- logs stored in the `logs` directory
+- automatic rotation (7 days retention)
+- maximum of 100 log files retained
+- each log includes:
+  - timestamp
+  - operation type
+  - success/failure status
+  - detailed error messages when applicable
 
-## Debug Mode
+## debug mode
 
-The program includes a debug mode that allows you to:
+the program includes a debug mode that allows you to:
 
-- Process fields one at a time
-- Review field details before processing
-- Skip specific fields
-- Get immediate feedback on success/failure
-- Exit at any point
+- process fields one at a time
+- review field details before processing
+- skip specific fields
+- get immediate feedback on success/failure
+- exit at any point
 
-## Distributable Structure
+## distribution
 
-The program distribution includes the following files:
+the program distribution includes:
 
+| file/folder                     | purpose                     | notes                                        |
+| ------------------------------- | --------------------------- | -------------------------------------------- |
+| `halo_custom_field_builder.exe` | main executable             | core program                                 |
+| `.env.template`                 | template configuration file | rename to `.env` and update with your values |
+| `source.csv`                    | your input CSV file         | must match the name specified in `.env`      |
+| `logs/`                         | directory for log files     | created automatically on first run           |
+| `README.md`                     | documentation               | contains setup and usage instructions        |
 
-| File/Folder                     | Purpose                     | Notes                                        |
-| --------------------------------- | ----------------------------- | ---------------------------------------------- |
-| `halo_custom_field_builder.exe` | Main executable             | Core program                                 |
-| `.env.template`                 | Template configuration file | Rename to ".env" and update with your values |
-| `source.csv`                    | Your input CSV file         | Must match the name specified in .env        |
-| `logs/`                         | Directory for log files     | Created automatically on first run           |
-| `README.md`                     | Documentation               | Contains setup and usage instructions        |
+### file locations
 
-### Important Requirements
+| requirement          | description                                             |
+| -------------------- | ------------------------------------------------------- |
+| `.env` location      | must be in the same directory as the executable         |
+| source file location | must be in the same directory as the executable         |
+| logs directory       | created automatically on first run in program directory |
 
+## running the program
 
-| Requirement          | Description                                                    |
-| ---------------------- | ---------------------------------------------------------------- |
-| `.env` Location      | Must be in the same directory as the executable                |
-| Source File Location | Must be in the same directory as the executable                |
-| Logs Directory       | Created automatically on first run in the executable directory |
+### direct execution
 
-## Running the Program
+1. open command prompt in program directory (Windows + R, type "cmd", Enter)
+2. run: `halo_custom_field_builder.exe`
 
-### Direct Execution
-1. Open Command Prompt in program directory (Windows + R, type "cmd", Enter)
-2. Run: `halo_custom_field_builder.exe`
+### optional batch file setup
 
-### Quick Launch Setup (Optional)
-1. Create a new .bat file containing:
+1. create a new `.bat` file containing:
    ```batch
    cmd /k halo_custom_field_builder.exe
    ```
-2. Save as `run_halo_custom_field_builder.bat` in program directory
-3. Double-click to run
+2. save as `run_halo_custom_field_builder.bat` in program directory
+3. double-click to run
 
-> **Note**: The .bat file is not included in the distributable since antivirus software often flags batch files. You can safely create this launcher yourself following the steps above, or simply use the direct execution method. The .bat file enables running via shortcuts from any location.
+**note:** the `.bat` file is not included in the distributable since antivirus software often flags batch files. you can safely create this launcher yourself following the steps above, or simply use the direct execution method. the `.bat` file enables running via shortcuts from any location.
+
+## limitations
+
+- program currently only supports field creation (not updating or deleting)
+- all fields created with default usage and searchable settings
+- batch processing limited to one field at a time to ensure proper error handling
