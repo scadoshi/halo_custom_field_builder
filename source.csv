@@ -1,0 +1,14 @@
+name,label,field_type_id,input_type_id,selection_options
+orderName,order name,0,0,
+orderPhone,phone number,0,1,
+pizzaSize,pizza size,2,0,"small,medium,large"
+crustType,crust type,2,0,"thin,regular,deep dish,stuffed"
+toppings,toppings,3,0,"pepperoni,mushrooms,pineapple,sausage,green peppers,red onions,black olives,bacon,ham,ground beef,italian sausage,spinach,fresh tomatoes,jalapeños,anchovies,chicken,feta,extra mozzarella,roasted garlic,artichoke hearts"
+extraCheese,extra cheese,6,0,
+specialInstructions,special instructions,1,0,
+allergyNotes,allergy information,10,0,
+deliveryDate,delivery date,4,0,
+deliveryTime,preferred time,5,0,
+paymentType,payment type,2,2,"cash,card,check"
+orderTip,tip,0,4,
+
