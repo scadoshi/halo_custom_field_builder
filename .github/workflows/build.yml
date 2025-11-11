@@ -40,7 +40,7 @@ jobs:
           targets: ${{ matrix.target }}
           
       - name: cache cargo
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin/
@@ -85,7 +85,7 @@ jobs:
           zip -r ../halo_custom_field_builder-${{ matrix.target }}.zip *
           
       - name: upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: halo_custom_field_builder-${{ matrix.target }}
           path: halo_custom_field_builder-*.zip
