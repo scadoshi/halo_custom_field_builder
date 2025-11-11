@@ -4,7 +4,6 @@ use url::Url;
 #[derive(Debug, Clone)]
 pub struct Config {
     pub base_url: Url,
-    // pub tenant: String,
     pub token_url: Url,
     pub api_url: Url,
     pub client_id: String,
@@ -13,7 +12,6 @@ pub struct Config {
 }
 
 const BASE_URL_KEY: &str = "BASE_URL";
-// const TENANT_KEY: &str = "TENANT";
 const CLIENT_ID_KEY: &str = "CLIENT_ID";
 const CLIENT_SECRET_KEY: &str = "CLIENT_SECRET";
 const SOURCE_FILE_NAME_KEY: &str = "SOURCE_FILE_NAME";
@@ -26,7 +24,6 @@ impl Config {
         dotenvy::dotenv().context("failed to load environment")?;
 
         let base_url = Url::try_from(std::env::var(BASE_URL_KEY)?.as_str())?;
-        // let tenant = std::env::var(TENANT_KEY)?;
         let mut token_url = base_url.clone();
         token_url.set_path(TOKEN_URL_PATH);
         let mut api_url = base_url.clone();
@@ -37,7 +34,6 @@ impl Config {
 
         Ok(Self {
             base_url,
-            // tenant,
             token_url,
             api_url,
             client_id,

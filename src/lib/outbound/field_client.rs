@@ -1,4 +1,3 @@
-
 use anyhow::Context;
 use log::debug;
 use reqwest::Client as ReqwestClient;
@@ -31,6 +30,8 @@ impl FieldClient {
 
         let endpoint = format!("{}/fieldinfo", self.config.api_url);
         let http_custom_field = HttpCustomField::from(custom_field);
+        // halo api requires an array of custom field update objects
+        let wrapped_http_custom_field = vec![http_custom_field];
 
         debug!("sending field creation request for: {}", custom_field.label);
 
@@ -39,7 +40,7 @@ impl FieldClient {
             .post(&endpoint)
             .header("Authorization", &self.auth_token)
             .header("Content-Type", "application/json")
-            .json(&http_custom_field)
+            .json(&wrapped_http_custom_field)
             .send()
             .await
             .context("failed to send request")?;
