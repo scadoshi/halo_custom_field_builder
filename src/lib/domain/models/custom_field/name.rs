@@ -39,3 +39,31 @@ impl Display for Name {
         write!(f, "{}", self.0)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_name_is_letters_digits_and_underscores_up_to_64_trimmed() {
+        assert_eq!(
+            Name::new(" pizza_Size2 ").unwrap().to_string(),
+            "pizza_Size2"
+        );
+        assert!(Name::new(&"x".repeat(64)).is_ok());
+        assert!(matches!(
+            Name::new(&"x".repeat(65)),
+            Err(InvalidName::TooLong)
+        ));
+        assert!(matches!(Name::new(""), Err(InvalidName::Empty)));
+        assert!(matches!(
+            Name::new("pizza-size"),
+            Err(InvalidName::InvalidCharacters)
+        ));
+        // A space inside is caught by the character rule before the whitespace rule.
+        assert!(matches!(
+            Name::new("pizza size"),
+            Err(InvalidName::InvalidCharacters)
+        ));
+    }
+}

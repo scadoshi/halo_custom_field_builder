@@ -136,3 +136,109 @@ impl FieldType {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_field_type_id_round_trips_with_its_input_type_id() {
+        let cases: &[(u8, Option<u8>)] = &[
+            (0, Some(0)),
+            (0, Some(6)),
+            (1, None),
+            (2, Some(0)),
+            (2, Some(2)),
+            (3, None),
+            (4, Some(0)),
+            (4, Some(1)),
+            (5, None),
+            (6, None),
+            (10, None),
+        ];
+        for (field_type_id, input_type_id) in cases {
+            let field_type = FieldType::new(*field_type_id, *input_type_id, vec![]).unwrap();
+            assert_eq!(field_type.field_type_id(), *field_type_id);
+            assert_eq!(field_type.input_type_id(), *input_type_id);
+        }
+    }
+
+    #[test]
+    fn a_missing_input_type_id_means_the_first_input_type() {
+        assert_eq!(
+            FieldType::new(0, None, vec![]).unwrap().input_type_id(),
+            Some(0)
+        );
+        assert_eq!(
+            FieldType::new(2, None, vec![]).unwrap().input_type_id(),
+            Some(0)
+        );
+        assert_eq!(
+            FieldType::new(4, None, vec![]).unwrap().input_type_id(),
+            Some(0)
+        );
+    }
+
+    #[test]
+    fn an_input_type_id_is_ignored_by_types_that_have_none() {
+        for id in [1, 3, 5, 6, 10] {
+            assert_eq!(
+                FieldType::new(id, Some(5), vec![]).unwrap().input_type_id(),
+                None
+            );
+        }
+    }
+
+    #[test]
+    fn unknown_ids_are_refused() {
+        assert!(matches!(
+            FieldType::new(7, None, vec![]),
+            Err(InvalidFieldType::InvalidFieldTypeId)
+        ));
+        assert!(matches!(
+            FieldType::new(0, Some(7), vec![]),
+            Err(InvalidFieldType::InvalidInputType(_))
+        ));
+        assert!(matches!(
+            FieldType::new(2, Some(3), vec![]),
+            Err(InvalidFieldType::InvalidInputType(_))
+        ));
+        assert!(matches!(
+            FieldType::new(4, Some(2), vec![]),
+            Err(InvalidFieldType::InvalidInputType(_))
+        ));
+    }
+
+    #[test]
+    fn selection_options_belong_to_the_selection_types_only() {
+        let options = vec!["small".to_string(), "large".to_string()];
+        assert_eq!(
+            FieldType::new(2, None, options.clone())
+                .unwrap()
+                .selection_options(),
+            Some(options.clone())
+        );
+        assert_eq!(
+            FieldType::new(3, None, options.clone())
+                .unwrap()
+                .selection_options(),
+            Some(options.clone())
+        );
+        assert_eq!(
+            FieldType::new(0, None, options)
+                .unwrap()
+                .selection_options(),
+            None
+        );
+    }
+
+    #[test]
+    fn the_options_string_joins_with_a_comma_and_strips_commas_inside_an_option() {
+        let field_type = FieldType::new(3, None, vec!["a,b".to_string(), "c".to_string()]).unwrap();
+        assert_eq!(
+            field_type.selection_options_string().as_deref(),
+            Some("ab, c")
+        );
+        assert_eq!(FieldType::Memo.selection_options_string(), None);
+    }
+}

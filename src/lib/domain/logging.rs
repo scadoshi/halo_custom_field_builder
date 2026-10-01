@@ -128,3 +128,50 @@ pub fn log_import_result(result: &ImportResults) -> anyhow::Result<()> {
     info!("\n{}", "=".repeat(80));
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{Duration as StdDuration, SystemTime};
+
+    #[test]
+    fn cleanup_deletes_only_logs_beyond_the_count_that_are_also_past_the_age() {
+        let dir = std::env::temp_dir().join(format!("halo_logs_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let old =
+            SystemTime::now() - StdDuration::from_secs(60 * 60 * 24 * (MAX_LOG_AGE as u64 + 1));
+        // MAX_LOG_COUNT fresh logs, then two over the count: one fresh, one old.
+        for i in 0..MAX_LOG_COUNT {
+            std::fs::write(dir.join(format!("fresh_{i}.log")), "").unwrap();
+        }
+        std::fs::write(dir.join("over_count_fresh.log"), "").unwrap();
+        let stale = dir.join("over_count_old.log");
+        std::fs::write(&stale, "").unwrap();
+        std::fs::File::options()
+            .write(true)
+            .open(&stale)
+            .unwrap()
+            .set_modified(old)
+            .unwrap();
+        let other = dir.join("notes.txt");
+        std::fs::write(&other, "").unwrap();
+        std::fs::File::options()
+            .write(true)
+            .open(&other)
+            .unwrap()
+            .set_modified(old)
+            .unwrap();
+
+        cleanup_old_logs(&dir).unwrap();
+
+        let remaining = std::fs::read_dir(&dir).unwrap().count();
+        let stale_gone = !stale.exists();
+        std::fs::remove_dir_all(&dir).unwrap();
+        assert!(stale_gone);
+        assert_eq!(
+            remaining,
+            MAX_LOG_COUNT + 2,
+            "the fresh over-count log and the txt stay"
+        );
+    }
+}

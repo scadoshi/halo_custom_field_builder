@@ -35,3 +35,20 @@ impl Display for Label {
         write!(f, "{}", self.0)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_label_is_anything_visible_up_to_256_characters() {
+        assert!(Label::new("pizza size").is_ok());
+        assert!(matches!(Label::new(""), Err(InvalidLabel::Empty)));
+        assert!(matches!(Label::new("   "), Err(InvalidLabel::Empty)));
+        assert!(Label::new(&"x".repeat(256)).is_ok());
+        assert!(matches!(
+            Label::new(&"x".repeat(257)),
+            Err(InvalidLabel::TooLong)
+        ));
+    }
+}

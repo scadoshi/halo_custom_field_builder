@@ -66,3 +66,41 @@ impl CustomField {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_row_becomes_a_field_with_its_options_split_on_commas() {
+        let field = CustomField::new(
+            "pizzaSize",
+            "pizza size",
+            2,
+            Some(0),
+            Some("small,medium,large".to_string()),
+        )
+        .unwrap();
+        assert_eq!(field.label.to_string(), "pizza size");
+        assert_eq!(
+            field.field_type.selection_options(),
+            Some(vec![
+                "small".to_string(),
+                "medium".to_string(),
+                "large".to_string()
+            ])
+        );
+    }
+
+    #[test]
+    fn each_part_is_checked_and_the_error_says_which() {
+        assert!(matches!(
+            CustomField::new("pizzaSize", " ", 0, None, None),
+            Err(InvalidCustomField::Label(_))
+        ));
+        assert!(matches!(
+            CustomField::new("pizzaSize", "ok", 9, None, None),
+            Err(InvalidCustomField::FieldType(_))
+        ));
+    }
+}

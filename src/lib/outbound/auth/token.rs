@@ -28,3 +28,23 @@ impl AuthToken {
         format!("{} {}", self.token_type, self.access_token)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_token_counts_as_expired_thirty_seconds_early() {
+        assert!(AuthToken::new("t".into(), "Bearer".into(), 29).is_expired());
+        assert!(!AuthToken::new("t".into(), "Bearer".into(), 31).is_expired());
+        assert!(AuthToken::new("t".into(), "Bearer".into(), -1).is_expired());
+    }
+
+    #[test]
+    fn the_header_is_the_type_then_the_token() {
+        assert_eq!(
+            AuthToken::new("abc".into(), "Bearer".into(), 60).header_value(),
+            "Bearer abc"
+        );
+    }
+}

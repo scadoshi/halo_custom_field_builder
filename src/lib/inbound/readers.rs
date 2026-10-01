@@ -96,14 +96,76 @@ impl CsvReader {
                 input_type_id,
                 selection_options,
             )
-            .context(format!(
-                "row {}: failed to create custom field",
-                row_index + 2
-            ))?;
+            .context(format!("row {}: failed to create custom field", row_index))?;
 
             fields.push(field);
         }
 
         Ok(fields)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn read(csv: &str) -> anyhow::Result<Vec<CustomField>> {
+        let path = std::env::temp_dir().join(format!(
+            "halo_fields_{}_{}.csv",
+            std::process::id(),
+            csv.len()
+        ));
+        std::fs::write(&path, csv).unwrap();
+        let config = Config::from_lookup(|key| match key {
+            "BASE_URL" => Some("https://example.halo.com".to_string()),
+            "SOURCE_FILE_NAME" => Some(path.to_string_lossy().into_owned()),
+            _ => Some("x".to_string()),
+        })
+        .unwrap();
+        let result = CsvReader::new().read_fields(&config);
+        std::fs::remove_file(&path).unwrap();
+        result
+    }
+
+    #[test]
+    fn columns_are_found_by_header_in_any_order() {
+        let fields = read(
+            "label,selection_options,name,input_type_id,field_type_id\n\
+             pizza size,\"small,large\",pizzaSize,0,2\n\
+             notes,,notes,,1\n",
+        )
+        .unwrap();
+        assert_eq!(fields.len(), 2);
+        assert_eq!(fields[0].label.to_string(), "pizza size");
+        assert_eq!(fields[0].field_type.field_type_id(), 2);
+        assert_eq!(
+            fields[0].field_type.selection_options(),
+            Some(vec!["small".to_string(), "large".to_string()])
+        );
+        assert_eq!(fields[1].field_type.field_type_id(), 1);
+        assert_eq!(fields[1].field_type.input_type_id(), None);
+    }
+
+    #[test]
+    fn a_missing_column_is_named() {
+        let message = read("name,label,field_type_id,input_type_id\na,b,0,0\n")
+            .unwrap_err()
+            .to_string();
+        assert!(message.contains("selection_options"), "{message}");
+    }
+
+    #[test]
+    fn a_bad_row_is_reported_by_its_line_in_the_file() {
+        let csv = "name,label,field_type_id,input_type_id,selection_options\n\
+                   fine,fine,0,0,\n\
+                   broken,broken,nine,0,\n";
+        assert!(read(csv).unwrap_err().to_string().contains("row 3"));
+
+        let csv = "name,label,field_type_id,input_type_id,selection_options\n\
+                   fine,fine,0,0,\n\
+                   fine,fine,0,0,\n\
+                   broken,broken,9,0,\n";
+        let message = format!("{:#}", read(csv).unwrap_err());
+        assert!(message.contains("row 4"), "{message}");
     }
 }
