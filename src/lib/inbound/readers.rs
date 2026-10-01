@@ -1,6 +1,6 @@
 use crate::config::Config;
 use crate::domain::models::custom_field::CustomField;
-use anyhow::{anyhow, Context};
+use anyhow::{Context, anyhow};
 use csv::Reader;
 
 pub struct CsvReader;

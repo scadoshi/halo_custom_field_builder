@@ -1,6 +1,6 @@
 use anyhow::Context;
 use chrono::{DateTime, Duration, Local};
-use log::{error, info, LevelFilter};
+use log::{LevelFilter, error, info};
 use simplelog::*;
 use std::fs;
 use std::fs::OpenOptions;

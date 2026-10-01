@@ -44,7 +44,9 @@ impl AuthClient {
     pub async fn get_valid_token(&self) -> anyhow::Result<String> {
         let mut token_guard = self.current_token.lock().await;
 
-        if let Some(token) = token_guard.as_ref() && !token.is_expired() {
+        if let Some(token) = token_guard.as_ref()
+            && !token.is_expired()
+        {
             return Ok(token.header_value());
         }
 

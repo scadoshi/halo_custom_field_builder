@@ -13,7 +13,7 @@ CLIENT_SECRET=8595ec7e-81e5-4a17-1234-6c3ae166e0c7
 SOURCE_FILE_NAME=source.csv
 ```
 
-the token and API URLs are built from `BASE_URL`. the CSV named by `SOURCE_FILE_NAME` sits next to the executable too. a missing variable stops the program and names it.
+`BASE_URL` must be https; the token and API URLs are built from it. the CSV named by `SOURCE_FILE_NAME` sits next to the executable too. a missing variable stops the program and names it.
 
 ## the CSV
 
