@@ -32,7 +32,7 @@ async fn run() -> anyhow::Result<()> {
     info!("✓ successfully validated {} fields\n", fields.len());
 
     let screen_manager = ScreenManager::new(fields);
-    screen_manager.show_initial_stats(&token.split_whitespace().next().unwrap_or("unknown"))?;
+    screen_manager.show_initial_stats(token.split_whitespace().next().unwrap_or("unknown"))?;
 
     let field_client = FieldClient::new(config.clone(), token);
 

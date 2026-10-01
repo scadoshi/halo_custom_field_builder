@@ -26,3 +26,8 @@ colored = "2.0"
 anyhow = "1.0.100"
 thiserror = "2.0.17"
 dotenvy = "0.15.7"
+
+[lints.clippy]
+todo = "deny"
+dbg_macro = "deny"
+unimplemented = "deny"

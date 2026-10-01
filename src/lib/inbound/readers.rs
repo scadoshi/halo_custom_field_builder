@@ -14,6 +14,12 @@ struct FieldPositions {
     selection_options: usize,
 }
 
+impl Default for CsvReader {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CsvReader {
     pub fn new() -> Self {
         CsvReader

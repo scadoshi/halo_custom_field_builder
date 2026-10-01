@@ -16,6 +16,12 @@ pub struct ImportResults {
     pub failed: Vec<FieldResult>,
 }
 
+impl Default for ImportResults {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ImportResults {
     pub fn new() -> Self {
         Self {

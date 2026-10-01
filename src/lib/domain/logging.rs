@@ -47,7 +47,6 @@ pub fn setup_logging() -> anyhow::Result<()> {
             file_config,
             OpenOptions::new()
                 .create(true)
-                .write(true)
                 .append(true)
                 .open(&log_file)
                 .context("failed to open log file")?,
@@ -66,7 +65,7 @@ fn cleanup_old_logs(logs_dir: &Path) -> anyhow::Result<()> {
     let mut log_files: Vec<_> = fs::read_dir(logs_dir)
         .context("failed to read logs directory")?
         .filter_map(|r| r.ok())
-        .filter(|entry| entry.path().extension().map_or(false, |ext| ext == "log"))
+        .filter(|entry| entry.path().extension().is_some_and(|ext| ext == "log"))
         .collect();
 
     log_files.sort_by(|a, b| {
@@ -78,12 +77,12 @@ fn cleanup_old_logs(logs_dir: &Path) -> anyhow::Result<()> {
     let cutoff_date = Local::now() - Duration::days(MAX_LOG_AGE);
 
     for entry in log_files.iter().skip(MAX_LOG_COUNT) {
-        if let Ok(metadata) = entry.metadata() {
-            if let Ok(modified) = metadata.modified() {
-                let modified: DateTime<Local> = modified.into();
-                if modified < cutoff_date {
-                    let _ = fs::remove_file(entry.path());
-                }
+        if let Ok(metadata) = entry.metadata()
+            && let Ok(modified) = metadata.modified()
+        {
+            let modified: DateTime<Local> = modified.into();
+            if modified < cutoff_date {
+                let _ = fs::remove_file(entry.path());
             }
         }
     }
