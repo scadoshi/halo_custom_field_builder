@@ -3,3 +3,6 @@
 Cargo.lock
 logs/
 .vscode
+
+# Worktrees created by Claude Code sessions
+.claude/worktrees/
