@@ -1,6 +1,6 @@
 use std::io::{self, Write};
 
-use colored::*;
+use colored::Colorize;
 use log::{error, info};
 
 use crate::domain::import_result::ImportResults;

@@ -5,7 +5,9 @@ use std::path::Path;
 use anyhow::Context;
 use chrono::{DateTime, Duration, Local};
 use log::{LevelFilter, error, info};
-use simplelog::*;
+use simplelog::{
+    ColorChoice, CombinedLogger, ConfigBuilder, TermLogger, TerminalMode, WriteLogger,
+};
 
 use crate::domain::import_result::ImportResults;
 

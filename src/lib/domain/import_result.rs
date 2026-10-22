@@ -1,5 +1,5 @@
 use chrono::{DateTime, Local};
-use colored::*;
+use colored::Colorize;
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
