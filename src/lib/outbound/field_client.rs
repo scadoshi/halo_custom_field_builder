@@ -1,7 +1,8 @@
+use std::time::Duration;
+
 use anyhow::Context;
 use log::debug;
 use reqwest::Client as ReqwestClient;
-use std::time::Duration;
 use tokio::time::sleep;
 
 use crate::config::Config;

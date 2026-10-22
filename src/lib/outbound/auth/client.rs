@@ -1,6 +1,7 @@
+use std::sync::Arc;
+
 use reqwest::Client as ReqwestClient;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use super::token::AuthToken;

@@ -1,5 +1,6 @@
-use crate::domain::models::custom_field::CustomField;
 use serde::Serialize;
+
+use crate::domain::models::custom_field::CustomField;
 
 #[derive(Serialize)]
 pub struct HttpCustomField {

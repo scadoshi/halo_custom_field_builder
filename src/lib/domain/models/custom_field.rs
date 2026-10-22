@@ -2,12 +2,11 @@ pub mod field_type;
 pub mod label;
 pub mod name;
 
-use crate::domain::models::custom_field::{
-    field_type::{FieldType, InvalidFieldType},
-    label::{InvalidLabel, Label},
-    name::{InvalidName, Name},
-};
 use thiserror::Error;
+
+use crate::domain::models::custom_field::field_type::{FieldType, InvalidFieldType};
+use crate::domain::models::custom_field::label::{InvalidLabel, Label};
+use crate::domain::models::custom_field::name::{InvalidName, Name};
 
 #[derive(Error, Debug)]
 pub enum InvalidCustomField {

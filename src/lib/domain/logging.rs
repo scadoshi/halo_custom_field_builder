@@ -1,10 +1,11 @@
+use std::fs;
+use std::fs::OpenOptions;
+use std::path::Path;
+
 use anyhow::Context;
 use chrono::{DateTime, Duration, Local};
 use log::{LevelFilter, error, info};
 use simplelog::*;
-use std::fs;
-use std::fs::OpenOptions;
-use std::path::Path;
 
 use crate::domain::import_result::ImportResults;
 
@@ -131,8 +132,9 @@ pub fn log_import_result(result: &ImportResults) -> anyhow::Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::time::{Duration as StdDuration, SystemTime};
+
+    use super::*;
 
     #[test]
     fn cleanup_deletes_only_logs_beyond_the_count_that_are_also_past_the_age() {

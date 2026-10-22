@@ -1,11 +1,16 @@
 pub mod input_types;
-use crate::domain::models::custom_field::field_type::input_types::{
-    date_input_type::{DateInputType, InvalidDateInputType},
-    single_select_input_type::{InvalidSingleSelectInputType, SingleSelectInputType},
-    text_input_type::{InvalidTextInputType, TextInputType},
-};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+
+use crate::domain::models::custom_field::field_type::input_types::date_input_type::{
+    DateInputType, InvalidDateInputType,
+};
+use crate::domain::models::custom_field::field_type::input_types::single_select_input_type::{
+    InvalidSingleSelectInputType, SingleSelectInputType,
+};
+use crate::domain::models::custom_field::field_type::input_types::text_input_type::{
+    InvalidTextInputType, TextInputType,
+};
 
 #[derive(Debug, Error)]
 pub enum InvalidFieldType {

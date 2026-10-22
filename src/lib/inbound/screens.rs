@@ -1,6 +1,7 @@
+use std::io::{self, Write};
+
 use colored::*;
 use log::{error, info};
-use std::io::{self, Write};
 
 use crate::domain::import_result::ImportResults;
 use crate::domain::models::custom_field::CustomField;
