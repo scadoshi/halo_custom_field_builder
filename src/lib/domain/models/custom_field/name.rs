@@ -9,10 +9,8 @@ pub enum InvalidName {
     Empty,
     #[error("cannot be longer than 64 characters")]
     TooLong,
-    #[error("cannot contain special characters")]
+    #[error("can only hold ASCII letters, digits and underscores")]
     InvalidCharacters,
-    #[error("cannot contain whitespace")]
-    InvalidWhitespace,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -25,10 +23,11 @@ impl Name {
             Err(InvalidName::Empty)
         } else if trimmed.chars().count() > 64 {
             Err(InvalidName::TooLong)
-        } else if !trimmed.chars().all(|c| c.is_alphanumeric() || c == '_') {
+        } else if !trimmed
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_')
+        {
             Err(InvalidName::InvalidCharacters)
-        } else if trimmed.contains(|c: char| c.is_whitespace()) {
-            Err(InvalidName::InvalidWhitespace)
         } else {
             Ok(Name(trimmed.to_string()))
         }
@@ -61,7 +60,6 @@ mod tests {
             Name::new("pizza-size"),
             Err(InvalidName::InvalidCharacters)
         ));
-        // A space inside is caught by the character rule before the whitespace rule.
         assert!(matches!(
             Name::new("pizza size"),
             Err(InvalidName::InvalidCharacters)
@@ -69,11 +67,12 @@ mod tests {
     }
 
     #[test]
-    fn a_name_is_measured_in_characters() {
-        assert!(Name::new(&"é".repeat(64)).is_ok());
-        assert!(matches!(
-            Name::new(&"é".repeat(65)),
-            Err(InvalidName::TooLong)
-        ));
+    fn a_name_is_ascii_letters_digits_and_underscores_only() {
+        for name in ["pizzá", "名前", "größe", "x\u{200b}y", &"é".repeat(64)] {
+            assert!(
+                matches!(Name::new(name), Err(InvalidName::InvalidCharacters)),
+                "{name:?}"
+            );
+        }
     }
 }
