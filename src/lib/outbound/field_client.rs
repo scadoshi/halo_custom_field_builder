@@ -10,6 +10,7 @@ use crate::domain::models::custom_field::CustomField;
 use crate::outbound::auth::client::AuthClient;
 use crate::outbound::http_custom_field::HttpCustomField;
 
+#[derive(Debug)]
 pub struct FieldClient {
     /// Halo's field creation endpoint.
     endpoint: String,

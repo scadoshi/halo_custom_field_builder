@@ -1,13 +1,27 @@
+use std::fmt;
+
 use anyhow::Context;
 use chrono::{DateTime, Duration, TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+use crate::config::REDACTED;
+
+#[derive(Serialize, Deserialize)]
 pub struct AuthToken {
     access_token: String,
     token_type: String,
     #[serde(with = "chrono::serde::ts_seconds")]
     expires_at: DateTime<Utc>,
+}
+
+impl fmt::Debug for AuthToken {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AuthToken")
+            .field("access_token", &REDACTED)
+            .field("token_type", &self.token_type)
+            .field("expires_at", &self.expires_at)
+            .finish()
+    }
 }
 
 impl AuthToken {
@@ -54,6 +68,14 @@ mod tests {
                 .unwrap()
                 .is_expired()
         );
+    }
+
+    #[test]
+    fn debug_output_hides_the_access_token() {
+        let token = AuthToken::new("hunter2".into(), "Bearer".into(), 60).unwrap();
+        let debug = format!("{token:?}");
+        assert!(!debug.contains("hunter2"), "{debug}");
+        assert!(debug.contains("Bearer"), "{debug}");
     }
 
     #[test]

@@ -21,6 +21,7 @@ pub enum DebugAction {
     Quit,
 }
 
+#[derive(Debug)]
 pub struct Menu {
     fields: Vec<CustomField>,
 }

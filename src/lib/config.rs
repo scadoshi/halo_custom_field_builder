@@ -1,7 +1,9 @@
+use std::fmt;
+
 use anyhow::Context;
 use url::Url;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Config {
     pub base_url: Url,
     pub token_url: Url,
@@ -10,6 +12,22 @@ pub struct Config {
     pub client_secret: String,
     pub source_file_name: String,
 }
+
+impl fmt::Debug for Config {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Config")
+            .field("base_url", &self.base_url)
+            .field("token_url", &self.token_url)
+            .field("api_url", &self.api_url)
+            .field("client_id", &self.client_id)
+            .field("client_secret", &REDACTED)
+            .field("source_file_name", &self.source_file_name)
+            .finish()
+    }
+}
+
+/// What debug output shows in place of a secret.
+pub(crate) const REDACTED: &str = "<redacted>";
 
 const BASE_URL_KEY: &str = "BASE_URL";
 const CLIENT_ID_KEY: &str = "CLIENT_ID";
@@ -105,6 +123,14 @@ mod tests {
             let message = Config::from_lookup(vars(&without)).unwrap_err().to_string();
             assert!(message.contains(key), "{message}");
         }
+    }
+
+    #[test]
+    fn debug_output_hides_the_client_secret() {
+        let config = with("CLIENT_SECRET", "hunter2").unwrap();
+        let debug = format!("{config:?}");
+        assert!(!debug.contains("hunter2"), "{debug}");
+        assert!(debug.contains("client_secret"), "{debug}");
     }
 
     #[test]

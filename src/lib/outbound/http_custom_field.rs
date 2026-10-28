@@ -2,7 +2,7 @@ use serde::Serialize;
 
 use crate::domain::models::custom_field::CustomField;
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct HttpCustomField {
     usage: u8,
     name: String,

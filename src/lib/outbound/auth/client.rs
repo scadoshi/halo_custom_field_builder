@@ -1,10 +1,12 @@
+use std::fmt;
+
 use anyhow::Context;
 use reqwest::Client as ReqwestClient;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
 use super::token::AuthToken;
-use crate::config::Config;
+use crate::config::{Config, REDACTED};
 
 #[derive(Debug, Deserialize)]
 struct TokenResponse {
@@ -13,7 +15,7 @@ struct TokenResponse {
     expires_in: i64,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Serialize)]
 struct TokenRequest<'config> {
     client_id: &'config str,
     client_secret: &'config str,
@@ -26,6 +28,18 @@ pub struct AuthClient {
     client_secret: String,
     http_client: ReqwestClient,
     current_token: Option<AuthToken>,
+}
+
+impl fmt::Debug for AuthClient {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AuthClient")
+            .field("token_url", &self.token_url)
+            .field("client_id", &self.client_id)
+            .field("client_secret", &REDACTED)
+            .field("http_client", &self.http_client)
+            .field("current_token", &self.current_token)
+            .finish()
+    }
 }
 
 impl AuthClient {
@@ -102,6 +116,18 @@ mod tests {
             .fetch_token()
             .await
             .unwrap_err()
+    }
+
+    #[test]
+    fn debug_output_hides_the_client_secret() {
+        let config = Config::from_lookup(|key| match key {
+            "BASE_URL" => Some("https://example.halo.com".to_string()),
+            "CLIENT_SECRET" => Some("hunter2".to_string()),
+            _ => Some("x".to_string()),
+        })
+        .unwrap();
+        let debug = format!("{:?}", AuthClient::new(&config));
+        assert!(!debug.contains("hunter2"), "{debug}");
     }
 
     #[tokio::test]
