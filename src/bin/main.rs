@@ -34,7 +34,7 @@ async fn run() -> anyhow::Result<()> {
     let screen_manager = ScreenManager::new(fields);
     screen_manager.show_initial_stats(token.split_whitespace().next().unwrap_or("unknown"))?;
 
-    let field_client = FieldClient::new(config.clone(), token);
+    let field_client = FieldClient::new(config.clone(), auth_client);
 
     match screen_manager.get_run_mode()? {
         RunMode::Import => {

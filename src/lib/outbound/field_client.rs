@@ -7,20 +7,21 @@ use tokio::time::sleep;
 
 use crate::config::Config;
 use crate::domain::models::custom_field::CustomField;
+use crate::outbound::auth::client::AuthClient;
 use crate::outbound::http_custom_field::HttpCustomField;
 
 pub struct FieldClient {
     config: Config,
     http_client: ReqwestClient,
-    auth_token: String,
+    auth_client: AuthClient,
 }
 
 impl FieldClient {
-    pub fn new(config: Config, auth_token: String) -> Self {
+    pub fn new(config: Config, auth_client: AuthClient) -> Self {
         Self {
             config,
             http_client: ReqwestClient::new(),
-            auth_token,
+            auth_client,
         }
     }
 
@@ -34,12 +35,15 @@ impl FieldClient {
         // halo api requires an array of custom field update objects
         let wrapped_http_custom_field = vec![http_custom_field];
 
+        // The cached token, or a new one when it is about to expire.
+        let auth_header = self.auth_client.get_valid_token().await?;
+
         debug!("sending field creation request for: {}", custom_field.label);
 
         let response = self
             .http_client
             .post(&endpoint)
-            .header("Authorization", &self.auth_token)
+            .header("Authorization", auth_header)
             .header("Content-Type", "application/json")
             .json(&wrapped_http_custom_field)
             .send()
@@ -62,5 +66,54 @@ impl FieldClient {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use super::*;
+    use crate::test_server::{self, Reply, TestServer};
+
+    /// A token that counts as expired two seconds after it arrives.
+    const SHORT_TOKEN: Reply = Reply::Json(
+        200,
+        r#"{"access_token":"one","token_type":"Bearer","expires_in":32}"#,
+    );
+    const NEXT_TOKEN: Reply = Reply::Json(
+        200,
+        r#"{"access_token":"two","token_type":"Bearer","expires_in":3600}"#,
+    );
+    const CREATED: Reply = Reply::Json(200, "[]");
+
+    fn field() -> CustomField {
+        CustomField::new("notes", "notes", 1, None, None).unwrap()
+    }
+
+    #[tokio::test]
+    async fn a_token_that_expires_mid_run_is_replaced_before_the_next_request() {
+        let server = TestServer::start(vec![SHORT_TOKEN, CREATED, NEXT_TOKEN, CREATED]).await;
+        let config = server.config();
+        let auth = AuthClient::new(config.clone());
+        auth.get_valid_token().await.unwrap();
+        let client = FieldClient::new(config, auth);
+
+        client.create_field(&field()).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(2500)).await;
+        client.create_field(&field()).await.unwrap();
+
+        let requests = server.requests();
+        assert_eq!(
+            test_server::lines(&requests),
+            [
+                "POST /auth/token HTTP/1.1",
+                "POST /api/fieldinfo HTTP/1.1",
+                "POST /auth/token HTTP/1.1",
+                "POST /api/fieldinfo HTTP/1.1",
+            ]
+        );
+        assert_eq!(requests[1].header("authorization"), Some("Bearer one"));
+        assert_eq!(requests[3].header("authorization"), Some("Bearer two"));
     }
 }
