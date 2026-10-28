@@ -17,7 +17,7 @@ async fn run() -> anyhow::Result<()> {
     info!("✓ configuration loaded successfully\n");
 
     info!("authenticating with api...");
-    let mut auth_client = AuthClient::new(config.clone());
+    let mut auth_client = AuthClient::new(&config);
 
     let token = auth_client.fetch_token().await.map_err(|e| {
         error!("✗ authentication failed: {}", e);
@@ -34,7 +34,7 @@ async fn run() -> anyhow::Result<()> {
     let menu = Menu::new(fields);
     menu.show_initial_stats(token.split_whitespace().next().unwrap_or("unknown"))?;
 
-    let mut field_client = FieldClient::new(config.clone(), auth_client);
+    let mut field_client = FieldClient::new(&config, auth_client);
 
     match menu.prompt_run_mode()? {
         RunMode::Import => {

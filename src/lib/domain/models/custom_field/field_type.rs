@@ -103,12 +103,12 @@ impl FieldType {
         }
     }
 
-    pub fn selection_options(&self) -> Option<Vec<String>> {
+    pub fn selection_options(&self) -> Option<&[String]> {
         match self {
             FieldType::SingleSelect {
                 selection_options, ..
-            } => Some(selection_options.clone()),
-            FieldType::MultiSelect { selection_options } => Some(selection_options.clone()),
+            }
+            | FieldType::MultiSelect { selection_options } => Some(selection_options),
             _ => None,
         }
     }
@@ -119,8 +119,8 @@ impl FieldType {
     pub fn selection_options_string(&self) -> Option<String> {
         self.selection_options().map(|options| {
             options
-                .into_iter()
-                .map(|option| option.replace(",", ""))
+                .iter()
+                .map(|option| option.replace(',', ""))
                 .collect::<Vec<String>>()
                 .join(", ")
         })
@@ -230,13 +230,13 @@ mod tests {
             FieldType::new(2, None, options.clone())
                 .unwrap()
                 .selection_options(),
-            Some(options.clone())
+            Some(options.as_slice())
         );
         assert_eq!(
             FieldType::new(3, None, options.clone())
                 .unwrap()
                 .selection_options(),
-            Some(options.clone())
+            Some(options.as_slice())
         );
         for id in [0, 1, 4, 5, 6, 10] {
             assert_eq!(

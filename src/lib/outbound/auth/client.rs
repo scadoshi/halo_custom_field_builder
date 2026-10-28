@@ -1,6 +1,7 @@
 use anyhow::Context;
 use reqwest::Client as ReqwestClient;
 use serde::{Deserialize, Serialize};
+use url::Url;
 
 use super::token::AuthToken;
 use crate::config::Config;
@@ -13,22 +14,26 @@ struct TokenResponse {
 }
 
 #[derive(Debug, Serialize)]
-struct TokenRequest {
-    client_id: String,
-    client_secret: String,
-    grant_type: String,
+struct TokenRequest<'config> {
+    client_id: &'config str,
+    client_secret: &'config str,
+    grant_type: &'static str,
 }
 
 pub struct AuthClient {
-    config: Config,
+    token_url: Url,
+    client_id: String,
+    client_secret: String,
     http_client: ReqwestClient,
     current_token: Option<AuthToken>,
 }
 
 impl AuthClient {
-    pub fn new(config: Config) -> Self {
+    pub fn new(config: &Config) -> Self {
         Self {
-            config,
+            token_url: config.token_url.clone(),
+            client_id: config.client_id.clone(),
+            client_secret: config.client_secret.clone(),
             http_client: ReqwestClient::new(),
             current_token: None,
         }
@@ -50,14 +55,14 @@ impl AuthClient {
 
     async fn request_token(&self) -> anyhow::Result<AuthToken> {
         let token_request = TokenRequest {
-            client_id: self.config.client_id.clone(),
-            client_secret: self.config.client_secret.clone(),
-            grant_type: "client_credentials".to_string(),
+            client_id: &self.client_id,
+            client_secret: &self.client_secret,
+            grant_type: "client_credentials",
         };
 
         let response = self
             .http_client
-            .post(self.config.token_url.as_str())
+            .post(self.token_url.as_str())
             .header("Content-Type", "application/x-www-form-urlencoded")
             .form(&token_request)
             .send()
@@ -93,7 +98,7 @@ mod tests {
 
     async fn token_error(reply: Reply) -> anyhow::Error {
         let server = TestServer::start(vec![reply]).await;
-        AuthClient::new(server.config())
+        AuthClient::new(&server.config())
             .fetch_token()
             .await
             .unwrap_err()
@@ -102,7 +107,7 @@ mod tests {
     #[tokio::test]
     async fn a_token_response_becomes_the_authorization_header() {
         let server = TestServer::start(vec![TOKEN]).await;
-        let header = AuthClient::new(server.config())
+        let header = AuthClient::new(&server.config())
             .fetch_token()
             .await
             .unwrap();
@@ -167,7 +172,7 @@ mod tests {
             let server = TestServer::start(vec![Reply::Json(200, body.leak())]).await;
             let message = format!(
                 "{:#}",
-                AuthClient::new(server.config())
+                AuthClient::new(&server.config())
                     .fetch_token()
                     .await
                     .unwrap_err()

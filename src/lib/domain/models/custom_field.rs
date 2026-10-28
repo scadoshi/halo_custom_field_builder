@@ -65,11 +65,13 @@ mod tests {
         assert_eq!(field.label.to_string(), "pizza size");
         assert_eq!(
             field.field_type.selection_options(),
-            Some(vec![
-                "small".to_string(),
-                "medium".to_string(),
-                "large".to_string()
-            ])
+            Some(
+                &[
+                    "small".to_string(),
+                    "medium".to_string(),
+                    "large".to_string()
+                ][..]
+            )
         );
     }
 
@@ -110,7 +112,7 @@ mod tests {
             CustomField::new("size", "size", 2, None, Some(" small , large ".to_string())).unwrap();
         assert_eq!(
             field.field_type.selection_options(),
-            Some(vec!["small".to_string(), "large".to_string()])
+            Some(&["small".to_string(), "large".to_string()][..])
         );
         for options in ["small,,large", "small,", " , "] {
             let message = CustomField::new("size", "size", 3, None, Some(options.to_string()))

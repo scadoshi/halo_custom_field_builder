@@ -147,7 +147,7 @@ mod tests {
         assert_eq!(fields[0].field_type.field_type_id(), 2);
         assert_eq!(
             fields[0].field_type.selection_options(),
-            Some(vec!["small".to_string(), "large".to_string()])
+            Some(&["small".to_string(), "large".to_string()][..])
         );
         assert_eq!(fields[1].field_type.field_type_id(), 1);
         assert_eq!(fields[1].field_type.input_type_id(), None);

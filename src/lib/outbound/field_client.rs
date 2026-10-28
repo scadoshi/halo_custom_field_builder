@@ -11,15 +11,16 @@ use crate::outbound::auth::client::AuthClient;
 use crate::outbound::http_custom_field::HttpCustomField;
 
 pub struct FieldClient {
-    config: Config,
+    /// Halo's field creation endpoint.
+    endpoint: String,
     http_client: ReqwestClient,
     auth_client: AuthClient,
 }
 
 impl FieldClient {
-    pub fn new(config: Config, auth_client: AuthClient) -> Self {
+    pub fn new(config: &Config, auth_client: AuthClient) -> Self {
         Self {
-            config,
+            endpoint: format!("{}/fieldinfo", config.api_url),
             http_client: ReqwestClient::new(),
             auth_client,
         }
@@ -30,7 +31,6 @@ impl FieldClient {
         // max 120 requests/minute, staying under the 700/5min limit
         sleep(Duration::from_millis(500)).await;
 
-        let endpoint = format!("{}/fieldinfo", self.config.api_url);
         let http_custom_field = HttpCustomField::from(custom_field);
         // halo api requires an array of custom field update objects
         let wrapped_http_custom_field = vec![http_custom_field];
@@ -42,7 +42,7 @@ impl FieldClient {
 
         let response = self
             .http_client
-            .post(&endpoint)
+            .post(&self.endpoint)
             .header("Authorization", auth_header)
             .header("Content-Type", "application/json")
             .json(&wrapped_http_custom_field)
@@ -95,9 +95,9 @@ mod tests {
     async fn a_token_that_expires_mid_run_is_replaced_before_the_next_request() {
         let server = TestServer::start(vec![SHORT_TOKEN, CREATED, NEXT_TOKEN, CREATED]).await;
         let config = server.config();
-        let mut auth = AuthClient::new(config.clone());
+        let mut auth = AuthClient::new(&config);
         auth.fetch_token().await.unwrap();
-        let mut client = FieldClient::new(config, auth);
+        let mut client = FieldClient::new(&config, auth);
 
         client.create_field(&field()).await.unwrap();
         tokio::time::sleep(Duration::from_millis(2500)).await;
