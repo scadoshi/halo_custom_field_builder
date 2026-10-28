@@ -104,7 +104,7 @@ impl Menu {
 
     pub async fn process_all_fields(
         &self,
-        field_client: &FieldClient,
+        field_client: &mut FieldClient,
     ) -> anyhow::Result<ImportResults> {
         let mut results = ImportResults::new();
 
@@ -124,7 +124,10 @@ impl Menu {
         Ok(results)
     }
 
-    pub async fn debug_mode(&self, field_client: &FieldClient) -> anyhow::Result<ImportResults> {
+    pub async fn debug_mode(
+        &self,
+        field_client: &mut FieldClient,
+    ) -> anyhow::Result<ImportResults> {
         info!("\nentering debug mode");
         info!("this mode will process fields one at a time\n");
 

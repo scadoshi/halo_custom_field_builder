@@ -1,9 +1,6 @@
-use std::sync::Arc;
-
 use anyhow::Context;
 use reqwest::Client as ReqwestClient;
 use serde::{Deserialize, Serialize};
-use tokio::sync::Mutex;
 
 use super::token::AuthToken;
 use crate::config::Config;
@@ -25,7 +22,7 @@ struct TokenRequest {
 pub struct AuthClient {
     config: Config,
     http_client: ReqwestClient,
-    current_token: Arc<Mutex<Option<AuthToken>>>,
+    current_token: Option<AuthToken>,
 }
 
 impl AuthClient {
@@ -33,14 +30,12 @@ impl AuthClient {
         Self {
             config,
             http_client: ReqwestClient::new(),
-            current_token: Arc::new(Mutex::new(None)),
+            current_token: None,
         }
     }
 
-    pub async fn fetch_token(&self) -> anyhow::Result<String> {
-        let mut token_guard = self.current_token.lock().await;
-
-        if let Some(token) = token_guard.as_ref()
+    pub async fn fetch_token(&mut self) -> anyhow::Result<String> {
+        if let Some(token) = &self.current_token
             && !token.is_expired()
         {
             return Ok(token.header_value());
@@ -48,7 +43,7 @@ impl AuthClient {
 
         let new_token = self.request_token().await?;
         let header = new_token.header_value();
-        *token_guard = Some(new_token);
+        self.current_token = Some(new_token);
 
         Ok(header)
     }

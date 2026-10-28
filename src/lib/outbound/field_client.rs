@@ -25,7 +25,7 @@ impl FieldClient {
         }
     }
 
-    pub async fn create_field(&self, custom_field: &CustomField) -> anyhow::Result<()> {
+    pub async fn create_field(&mut self, custom_field: &CustomField) -> anyhow::Result<()> {
         // rate limiting: 500ms delay between requests
         // max 120 requests/minute, staying under the 700/5min limit
         sleep(Duration::from_millis(500)).await;
@@ -95,9 +95,9 @@ mod tests {
     async fn a_token_that_expires_mid_run_is_replaced_before_the_next_request() {
         let server = TestServer::start(vec![SHORT_TOKEN, CREATED, NEXT_TOKEN, CREATED]).await;
         let config = server.config();
-        let auth = AuthClient::new(config.clone());
+        let mut auth = AuthClient::new(config.clone());
         auth.fetch_token().await.unwrap();
-        let client = FieldClient::new(config, auth);
+        let mut client = FieldClient::new(config, auth);
 
         client.create_field(&field()).await.unwrap();
         tokio::time::sleep(Duration::from_millis(2500)).await;
