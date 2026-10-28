@@ -82,11 +82,11 @@ impl AuthClient {
         let token_response: TokenResponse =
             serde_json::from_str(&response_text).context("failed to parse token response")?;
 
-        Ok(AuthToken::new(
+        AuthToken::new(
             token_response.access_token,
             token_response.token_type,
             token_response.expires_in,
-        ))
+        )
     }
 }
 
@@ -156,5 +156,27 @@ mod tests {
                 .is_some(),
             "{error:#}"
         );
+    }
+
+    #[tokio::test]
+    async fn an_expiry_too_far_out_is_an_error() {
+        for expires_in in [
+            "9223372036854775807",
+            "9223372036854775",
+            "-9223372036854775808",
+        ] {
+            let body = format!(
+                r#"{{"access_token":"tok","token_type":"Bearer","expires_in":{expires_in}}}"#
+            );
+            let server = TestServer::start(vec![Reply::Json(200, body.leak())]).await;
+            let message = format!(
+                "{:#}",
+                AuthClient::new(server.config())
+                    .get_valid_token()
+                    .await
+                    .unwrap_err()
+            );
+            assert!(message.contains("expires_in"), "{expires_in}: {message}");
+        }
     }
 }

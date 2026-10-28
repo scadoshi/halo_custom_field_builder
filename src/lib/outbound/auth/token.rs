@@ -1,4 +1,5 @@
-use chrono::{DateTime, Duration, Utc};
+use anyhow::Context;
+use chrono::{DateTime, Duration, TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -10,13 +11,16 @@ pub struct AuthToken {
 }
 
 impl AuthToken {
-    pub fn new(access_token: String, token_type: String, expires_in: i64) -> Self {
-        let expires_at = Utc::now() + Duration::seconds(expires_in);
-        Self {
+    /// A token that expires `expires_in` seconds from now.
+    pub fn new(access_token: String, token_type: String, expires_in: i64) -> anyhow::Result<Self> {
+        let expires_at = TimeDelta::try_seconds(expires_in)
+            .and_then(|lifetime| Utc::now().checked_add_signed(lifetime))
+            .with_context(|| format!("token expires_in {expires_in} is out of range"))?;
+        Ok(Self {
             access_token,
             token_type,
             expires_at,
-        }
+        })
     }
 
     pub fn is_expired(&self) -> bool {
@@ -35,15 +39,29 @@ mod tests {
 
     #[test]
     fn a_token_counts_as_expired_thirty_seconds_early() {
-        assert!(AuthToken::new("t".into(), "Bearer".into(), 29).is_expired());
-        assert!(!AuthToken::new("t".into(), "Bearer".into(), 31).is_expired());
-        assert!(AuthToken::new("t".into(), "Bearer".into(), -1).is_expired());
+        assert!(
+            AuthToken::new("t".into(), "Bearer".into(), 29)
+                .unwrap()
+                .is_expired()
+        );
+        assert!(
+            !AuthToken::new("t".into(), "Bearer".into(), 31)
+                .unwrap()
+                .is_expired()
+        );
+        assert!(
+            AuthToken::new("t".into(), "Bearer".into(), -1)
+                .unwrap()
+                .is_expired()
+        );
     }
 
     #[test]
     fn the_header_is_the_type_then_the_token() {
         assert_eq!(
-            AuthToken::new("abc".into(), "Bearer".into(), 60).header_value(),
+            AuthToken::new("abc".into(), "Bearer".into(), 60)
+                .unwrap()
+                .header_value(),
             "Bearer abc"
         );
     }
