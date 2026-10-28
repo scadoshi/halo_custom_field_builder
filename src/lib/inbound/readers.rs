@@ -1,10 +1,10 @@
+use std::fs::File;
+use std::path::Path;
+
 use anyhow::{Context, anyhow};
 use csv::{Position, Reader, StringRecord};
 
-use crate::config::Config;
 use crate::domain::models::custom_field::CustomField;
-
-pub struct CsvReader;
 
 #[derive(Debug)]
 struct FieldPositions {
@@ -15,105 +15,92 @@ struct FieldPositions {
     selection_options: usize,
 }
 
-impl Default for CsvReader {
-    fn default() -> Self {
-        Self::new()
-    }
+fn open_csv(path: &Path) -> anyhow::Result<Reader<File>> {
+    Reader::from_path(path).with_context(|| format!("failed to open {}", path.display()))
 }
 
-impl CsvReader {
-    pub fn new() -> Self {
-        CsvReader
-    }
+fn column_positions(headers: &StringRecord) -> anyhow::Result<FieldPositions> {
+    Ok(FieldPositions {
+        name: headers
+            .iter()
+            .position(|h| h == "name")
+            .ok_or_else(|| anyhow!("missing 'name' column"))?,
 
-    fn open_csv(&self, config: &Config) -> anyhow::Result<Reader<std::fs::File>> {
-        Reader::from_path(&config.source_file_name)
-            .with_context(|| format!("failed to open {}", config.source_file_name))
-    }
+        label: headers
+            .iter()
+            .position(|h| h == "label")
+            .ok_or_else(|| anyhow!("missing 'label' column"))?,
 
-    fn column_positions(&self, headers: &StringRecord) -> anyhow::Result<FieldPositions> {
-        Ok(FieldPositions {
-            name: headers
-                .iter()
-                .position(|h| h == "name")
-                .ok_or_else(|| anyhow!("missing 'name' column"))?,
+        field_type_id: headers
+            .iter()
+            .position(|h| h == "field_type_id")
+            .ok_or_else(|| anyhow!("missing 'field_type_id' column"))?,
 
-            label: headers
-                .iter()
-                .position(|h| h == "label")
-                .ok_or_else(|| anyhow!("missing 'label' column"))?,
+        input_type_id: headers
+            .iter()
+            .position(|h| h == "input_type_id")
+            .ok_or_else(|| anyhow!("missing 'input_type_id' column"))?,
 
-            field_type_id: headers
-                .iter()
-                .position(|h| h == "field_type_id")
-                .ok_or_else(|| anyhow!("missing 'field_type_id' column"))?,
+        selection_options: headers
+            .iter()
+            .position(|h| h == "selection_options")
+            .ok_or_else(|| anyhow!("missing 'selection_options' column"))?,
+    })
+}
 
-            input_type_id: headers
-                .iter()
-                .position(|h| h == "input_type_id")
-                .ok_or_else(|| anyhow!("missing 'input_type_id' column"))?,
+pub fn read_fields(path: &Path) -> anyhow::Result<Vec<CustomField>> {
+    let mut fields = Vec::new();
+    let mut reader = open_csv(path)?;
 
-            selection_options: headers
-                .iter()
-                .position(|h| h == "selection_options")
-                .ok_or_else(|| anyhow!("missing 'selection_options' column"))?,
-        })
-    }
+    let headers = reader.headers()?;
+    let positions = column_positions(headers)?;
 
-    pub fn read_fields(&self, config: &Config) -> anyhow::Result<Vec<CustomField>> {
-        let mut fields = Vec::new();
-        let mut reader = self.open_csv(config)?;
-
-        let headers = reader.headers()?;
-        let positions = self.column_positions(headers)?;
-
-        for (index, result) in reader.records().enumerate() {
-            // The line a record starts on; counting records misses multi-line cells.
-            let fallback = u64::try_from(index).unwrap_or(u64::MAX).saturating_add(2);
-            let row_index = match &result {
-                Ok(row) => row.position(),
-                Err(e) => e.position(),
-            }
-            .map_or(fallback, Position::line);
-            let row_data = result.context(format!("row {}: failed to read entry", row_index))?;
-            let cell = |index| column(&row_data, index).with_context(|| format!("row {row_index}"));
-
-            let field_type_id: u8 = cell(positions.field_type_id)?
-                .parse()
-                .context(format!("row {}: invalid field_type_id value", row_index))?;
-
-            let input_type_id = cell(positions.input_type_id)?;
-            let input_type_id: Option<u8> = if input_type_id.trim().is_empty() {
-                None
-            } else {
-                Some(
-                    input_type_id
-                        .parse()
-                        .context(format!("row {}: invalid input_type_id value", row_index))?,
-                )
-            };
-
-            let selection_options = cell(positions.selection_options)?;
-            let selection_options = if selection_options.trim().is_empty() {
-                None
-            } else {
-                Some(selection_options.to_string())
-            };
-
-            let field = CustomField::new(
-                cell(positions.name)?,
-                cell(positions.label)?,
-                field_type_id,
-                input_type_id,
-                selection_options,
-            )
-            .context(format!("row {}: failed to create custom field", row_index))?;
-
-            fields.push(field);
+    for (index, result) in reader.records().enumerate() {
+        // The line a record starts on; counting records misses multi-line cells.
+        let fallback = u64::try_from(index).unwrap_or(u64::MAX).saturating_add(2);
+        let row_index = match &result {
+            Ok(row) => row.position(),
+            Err(e) => e.position(),
         }
+        .map_or(fallback, Position::line);
+        let row_data = result.context(format!("row {}: failed to read entry", row_index))?;
+        let cell = |index| column(&row_data, index).with_context(|| format!("row {row_index}"));
 
-        Ok(fields)
+        let field_type_id: u8 = cell(positions.field_type_id)?
+            .parse()
+            .context(format!("row {}: invalid field_type_id value", row_index))?;
+
+        let input_type_id = cell(positions.input_type_id)?;
+        let input_type_id: Option<u8> = if input_type_id.trim().is_empty() {
+            None
+        } else {
+            Some(
+                input_type_id
+                    .parse()
+                    .context(format!("row {}: invalid input_type_id value", row_index))?,
+            )
+        };
+
+        let selection_options = cell(positions.selection_options)?;
+        let selection_options = if selection_options.trim().is_empty() {
+            None
+        } else {
+            Some(selection_options.to_string())
+        };
+
+        let field = CustomField::new(
+            cell(positions.name)?,
+            cell(positions.label)?,
+            field_type_id,
+            input_type_id,
+            selection_options,
+        )
+        .context(format!("row {}: failed to create custom field", row_index))?;
+
+        fields.push(field);
     }
+
+    Ok(fields)
 }
 
 /// The cell at `index`, or an error when the row is too short to have one.
@@ -142,13 +129,7 @@ mod tests {
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
         std::fs::write(&path, csv).unwrap();
-        let config = Config::from_lookup(|key| match key {
-            "BASE_URL" => Some("https://example.halo.com".to_string()),
-            "SOURCE_FILE_NAME" => Some(path.to_string_lossy().into_owned()),
-            _ => Some("x".to_string()),
-        })
-        .unwrap();
-        let result = CsvReader::new().read_fields(&config);
+        let result = read_fields(&path);
         std::fs::remove_file(&path).unwrap();
         result
     }
@@ -198,13 +179,7 @@ mod tests {
     #[test]
     fn a_missing_file_is_named() {
         let path = std::env::temp_dir().join("halo_fields_that_do_not_exist.csv");
-        let config = Config::from_lookup(|key| match key {
-            "BASE_URL" => Some("https://example.halo.com".to_string()),
-            "SOURCE_FILE_NAME" => Some(path.to_string_lossy().into_owned()),
-            _ => Some("x".to_string()),
-        })
-        .unwrap();
-        let message = format!("{:#}", CsvReader::new().read_fields(&config).unwrap_err());
+        let message = format!("{:#}", read_fields(&path).unwrap_err());
         assert!(message.contains(&*path.to_string_lossy()), "{message}");
     }
 

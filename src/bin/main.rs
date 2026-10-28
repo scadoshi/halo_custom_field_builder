@@ -1,8 +1,9 @@
+use std::path::Path;
 use std::process::ExitCode;
 
 use halo_custom_field_builder::config::Config;
 use halo_custom_field_builder::domain::logging;
-use halo_custom_field_builder::inbound::readers::CsvReader;
+use halo_custom_field_builder::inbound::readers;
 use halo_custom_field_builder::inbound::screens::{Menu, RunMode};
 use halo_custom_field_builder::outbound::auth::client::AuthClient;
 use halo_custom_field_builder::outbound::field_client::FieldClient;
@@ -27,8 +28,7 @@ async fn run() -> anyhow::Result<()> {
     info!("✓ token acquired and valid\n");
 
     info!("reading csv file...");
-    let reader = CsvReader::new();
-    let fields = reader.read_fields(&config)?;
+    let fields = readers::read_fields(Path::new(&config.source_file_name))?;
     info!("✓ successfully validated {} fields\n", fields.len());
 
     let menu = Menu::new(fields);
