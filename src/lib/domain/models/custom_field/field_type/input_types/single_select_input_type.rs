@@ -1,9 +1,6 @@
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 
-#[derive(Debug, Error)]
-#[error("invalid single select input type was given")]
-pub struct InvalidSingleSelectInputType;
+use crate::domain::models::custom_field::field_type::InvalidFieldType;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SingleSelectInputType {
@@ -23,14 +20,17 @@ impl SingleSelectInputType {
 }
 
 impl TryFrom<u8> for SingleSelectInputType {
-    type Error = InvalidSingleSelectInputType;
+    type Error = InvalidFieldType;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
             0 => Ok(SingleSelectInputType::Standard),
             1 => Ok(SingleSelectInputType::Tree),
             2 => Ok(SingleSelectInputType::Radio),
-            _ => Err(InvalidSingleSelectInputType),
+            _ => Err(InvalidFieldType::InvalidInputType {
+                field_type_id: 2,
+                input_type_id: value,
+            }),
         }
     }
 }

@@ -2,40 +2,19 @@ pub mod input_types;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::domain::models::custom_field::field_type::input_types::date_input_type::{
-    DateInputType, InvalidDateInputType,
-};
-use crate::domain::models::custom_field::field_type::input_types::single_select_input_type::{
-    InvalidSingleSelectInputType, SingleSelectInputType,
-};
-use crate::domain::models::custom_field::field_type::input_types::text_input_type::{
-    InvalidTextInputType, TextInputType,
-};
+use crate::domain::models::custom_field::field_type::input_types::date_input_type::DateInputType;
+use crate::domain::models::custom_field::field_type::input_types::single_select_input_type::SingleSelectInputType;
+use crate::domain::models::custom_field::field_type::input_types::text_input_type::TextInputType;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum InvalidFieldType {
-    #[error("invalid field type id was given")]
-    InvalidFieldTypeId,
-    #[error(transparent)]
-    InvalidInputType(anyhow::Error),
-}
-
-impl From<InvalidTextInputType> for InvalidFieldType {
-    fn from(value: InvalidTextInputType) -> Self {
-        Self::InvalidInputType(value.into())
-    }
-}
-
-impl From<InvalidDateInputType> for InvalidFieldType {
-    fn from(value: InvalidDateInputType) -> Self {
-        Self::InvalidInputType(value.into())
-    }
-}
-
-impl From<InvalidSingleSelectInputType> for InvalidFieldType {
-    fn from(value: InvalidSingleSelectInputType) -> Self {
-        Self::InvalidInputType(value.into())
-    }
+    #[error("field_type_id {0} is not a field type")]
+    InvalidFieldTypeId(u8),
+    #[error("input_type_id {input_type_id} is not an input type of field_type_id {field_type_id}")]
+    InvalidInputType {
+        field_type_id: u8,
+        input_type_id: u8,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -88,7 +67,7 @@ impl FieldType {
             5 => Ok(FieldType::Time),
             6 => Ok(FieldType::Checkbox),
             10 => Ok(FieldType::Rich),
-            _ => Err(InvalidFieldType::InvalidFieldTypeId),
+            _ => Err(InvalidFieldType::InvalidFieldTypeId(field_type_id)),
         }
     }
 
@@ -196,22 +175,19 @@ mod tests {
 
     #[test]
     fn unknown_ids_are_refused() {
-        assert!(matches!(
+        assert_eq!(
             FieldType::new(7, None, vec![]),
-            Err(InvalidFieldType::InvalidFieldTypeId)
-        ));
-        assert!(matches!(
-            FieldType::new(0, Some(7), vec![]),
-            Err(InvalidFieldType::InvalidInputType(_))
-        ));
-        assert!(matches!(
-            FieldType::new(2, Some(3), vec![]),
-            Err(InvalidFieldType::InvalidInputType(_))
-        ));
-        assert!(matches!(
-            FieldType::new(4, Some(2), vec![]),
-            Err(InvalidFieldType::InvalidInputType(_))
-        ));
+            Err(InvalidFieldType::InvalidFieldTypeId(7))
+        );
+        for (field_type_id, input_type_id) in [(0, 7), (2, 3), (4, 2)] {
+            assert_eq!(
+                FieldType::new(field_type_id, Some(input_type_id), vec![]),
+                Err(InvalidFieldType::InvalidInputType {
+                    field_type_id,
+                    input_type_id
+                })
+            );
+        }
     }
 
     #[test]

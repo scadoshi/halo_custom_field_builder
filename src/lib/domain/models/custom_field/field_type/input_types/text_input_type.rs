@@ -1,9 +1,6 @@
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 
-#[derive(Debug, Error)]
-#[error("invalid text input type was given")]
-pub struct InvalidTextInputType;
+use crate::domain::models::custom_field::field_type::InvalidFieldType;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TextInputType {
@@ -31,7 +28,7 @@ impl TextInputType {
 }
 
 impl TryFrom<u8> for TextInputType {
-    type Error = InvalidTextInputType;
+    type Error = InvalidFieldType;
     fn try_from(input_type_id: u8) -> Result<Self, Self::Error> {
         match input_type_id {
             0 => Ok(TextInputType::Anything),
@@ -41,7 +38,10 @@ impl TryFrom<u8> for TextInputType {
             4 => Ok(TextInputType::Decimal),
             5 => Ok(TextInputType::URL),
             6 => Ok(TextInputType::Password),
-            _ => Err(InvalidTextInputType),
+            _ => Err(InvalidFieldType::InvalidInputType {
+                field_type_id: 0,
+                input_type_id,
+            }),
         }
     }
 }

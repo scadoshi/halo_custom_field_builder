@@ -1,9 +1,6 @@
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 
-#[derive(Debug, Error)]
-#[error("invalid date input type was given")]
-pub struct InvalidDateInputType;
+use crate::domain::models::custom_field::field_type::InvalidFieldType;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum DateInputType {
@@ -21,13 +18,16 @@ impl DateInputType {
 }
 
 impl TryFrom<u8> for DateInputType {
-    type Error = InvalidDateInputType;
+    type Error = InvalidFieldType;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
             0 => Ok(DateInputType::Date),
             1 => Ok(DateInputType::DateTime),
-            _ => Err(InvalidDateInputType),
+            _ => Err(InvalidFieldType::InvalidInputType {
+                field_type_id: 4,
+                input_type_id: value,
+            }),
         }
     }
 }

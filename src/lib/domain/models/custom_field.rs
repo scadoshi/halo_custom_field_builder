@@ -10,30 +10,12 @@ use crate::domain::models::custom_field::name::{InvalidName, Name};
 
 #[derive(Error, Debug)]
 pub enum InvalidCustomField {
+    #[error("name {0}")]
+    Name(#[from] InvalidName),
+    #[error("label {0}")]
+    Label(#[from] InvalidLabel),
     #[error(transparent)]
-    Name(InvalidName),
-    #[error(transparent)]
-    Label(InvalidLabel),
-    #[error(transparent)]
-    FieldType(InvalidFieldType),
-}
-
-impl From<InvalidName> for InvalidCustomField {
-    fn from(value: InvalidName) -> Self {
-        InvalidCustomField::Name(value)
-    }
-}
-
-impl From<InvalidLabel> for InvalidCustomField {
-    fn from(value: InvalidLabel) -> Self {
-        InvalidCustomField::Label(value)
-    }
-}
-
-impl From<InvalidFieldType> for InvalidCustomField {
-    fn from(value: InvalidFieldType) -> Self {
-        InvalidCustomField::FieldType(value)
-    }
+    FieldType(#[from] InvalidFieldType),
 }
 
 #[derive(Debug, Clone)]
@@ -101,5 +83,24 @@ mod tests {
             CustomField::new("pizzaSize", "ok", 9, None, None),
             Err(InvalidCustomField::FieldType(_))
         ));
+    }
+
+    #[test]
+    fn the_error_names_the_column() {
+        let message = |name, label, field_type_id, input_type_id| {
+            CustomField::new(name, label, field_type_id, input_type_id, None)
+                .unwrap_err()
+                .to_string()
+        };
+        assert_eq!(message("", "ok", 0, None), "name cannot be empty");
+        assert_eq!(message("ok", " ", 0, None), "label cannot be empty");
+        assert_eq!(
+            message("ok", "ok", 9, None),
+            "field_type_id 9 is not a field type"
+        );
+        assert_eq!(
+            message("ok", "ok", 4, Some(2)),
+            "input_type_id 2 is not an input type of field_type_id 4"
+        );
     }
 }
