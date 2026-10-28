@@ -27,7 +27,8 @@ impl CsvReader {
     }
 
     fn open_csv(&self, config: &Config) -> anyhow::Result<Reader<std::fs::File>> {
-        Ok(Reader::from_path(&config.source_file_name)?)
+        Reader::from_path(&config.source_file_name)
+            .with_context(|| format!("failed to open {}", config.source_file_name))
     }
 
     fn get_field_positions(&self, headers: &csv::StringRecord) -> anyhow::Result<FieldPositions> {
@@ -168,5 +169,18 @@ mod tests {
                    broken,broken,9,0,\n";
         let message = format!("{:#}", read(csv).unwrap_err());
         assert!(message.contains("row 4"), "{message}");
+    }
+
+    #[test]
+    fn a_missing_file_is_named() {
+        let path = std::env::temp_dir().join("halo_fields_that_do_not_exist.csv");
+        let config = Config::from_lookup(|key| match key {
+            "BASE_URL" => Some("https://example.halo.com".to_string()),
+            "SOURCE_FILE_NAME" => Some(path.to_string_lossy().into_owned()),
+            _ => Some("x".to_string()),
+        })
+        .unwrap();
+        let message = format!("{:#}", CsvReader::new().read_fields(&config).unwrap_err());
+        assert!(message.contains(&*path.to_string_lossy()), "{message}");
     }
 }
