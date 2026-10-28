@@ -1,5 +1,5 @@
 use anyhow::{Context, anyhow};
-use csv::Reader;
+use csv::{Reader, StringRecord};
 
 use crate::config::Config;
 use crate::domain::models::custom_field::CustomField;
@@ -31,7 +31,7 @@ impl CsvReader {
             .with_context(|| format!("failed to open {}", config.source_file_name))
     }
 
-    fn get_field_positions(&self, headers: &csv::StringRecord) -> anyhow::Result<FieldPositions> {
+    fn get_field_positions(&self, headers: &StringRecord) -> anyhow::Result<FieldPositions> {
         Ok(FieldPositions {
             name: headers
                 .iter()
@@ -70,30 +70,33 @@ impl CsvReader {
         for (raw_row_index, result) in reader.records().enumerate() {
             let row_index = raw_row_index + 2;
             let row_data = result.context(format!("row {}: failed to read entry", row_index))?;
+            let cell = |index| column(&row_data, index).with_context(|| format!("row {row_index}"));
 
-            let field_type_id: u8 = row_data[positions.field_type_id]
+            let field_type_id: u8 = cell(positions.field_type_id)?
                 .parse()
                 .context(format!("row {}: invalid field_type_id value", row_index))?;
 
-            let input_type_id: Option<u8> = if row_data[positions.input_type_id].trim().is_empty() {
+            let input_type_id = cell(positions.input_type_id)?;
+            let input_type_id: Option<u8> = if input_type_id.trim().is_empty() {
                 None
             } else {
                 Some(
-                    row_data[positions.input_type_id]
+                    input_type_id
                         .parse()
                         .context(format!("row {}: invalid input_type_id value", row_index))?,
                 )
             };
 
-            let selection_options = if row_data[positions.selection_options].trim().is_empty() {
+            let selection_options = cell(positions.selection_options)?;
+            let selection_options = if selection_options.trim().is_empty() {
                 None
             } else {
-                Some(row_data[positions.selection_options].to_string())
+                Some(selection_options.to_string())
             };
 
             let field = CustomField::new(
-                &row_data[positions.name],
-                &row_data[positions.label],
+                cell(positions.name)?,
+                cell(positions.label)?,
                 field_type_id,
                 input_type_id,
                 selection_options,
@@ -105,6 +108,17 @@ impl CsvReader {
 
         Ok(fields)
     }
+}
+
+/// The cell at `index`, or an error when the row is too short to have one.
+fn column(row: &StringRecord, index: usize) -> anyhow::Result<&str> {
+    row.get(index).with_context(|| {
+        format!(
+            "no column {} in a row of {}",
+            index.saturating_add(1),
+            row.len()
+        )
+    })
 }
 
 #[cfg(test)]
@@ -182,5 +196,15 @@ mod tests {
         .unwrap();
         let message = format!("{:#}", CsvReader::new().read_fields(&config).unwrap_err());
         assert!(message.contains(&*path.to_string_lossy()), "{message}");
+    }
+
+    #[test]
+    fn a_short_row_is_an_error_not_a_panic() {
+        let row = StringRecord::from(vec!["a", "b"]);
+        assert_eq!(column(&row, 1).unwrap(), "b");
+        assert_eq!(
+            column(&row, 2).unwrap_err().to_string(),
+            "no column 3 in a row of 2"
+        );
     }
 }
