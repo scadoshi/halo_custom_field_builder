@@ -13,6 +13,8 @@ use crate::domain::import_result::ImportResults;
 
 const MAX_LOG_AGE: i64 = 7;
 const MAX_LOG_COUNT: usize = 100;
+/// Logs cleanup keeps, leaving room for the one the run creates next.
+const KEPT_BEFORE_RUN: usize = MAX_LOG_COUNT.saturating_sub(1);
 
 pub fn setup_logging() -> anyhow::Result<()> {
     let logs_dir = Path::new("logs");
@@ -79,13 +81,13 @@ fn cleanup_old_logs(logs_dir: &Path) -> anyhow::Result<()> {
 
     let cutoff_date = Local::now() - Duration::days(MAX_LOG_AGE);
 
-    // Newest first, so everything past MAX_LOG_COUNT is surplus.
+    // Newest first, so everything past KEPT_BEFORE_RUN is surplus.
     for (index, entry) in log_files.iter().enumerate() {
         let too_old = entry
             .metadata()
             .and_then(|metadata| metadata.modified())
             .is_ok_and(|modified| DateTime::<Local>::from(modified) < cutoff_date);
-        if index >= MAX_LOG_COUNT || too_old {
+        if index >= KEPT_BEFORE_RUN || too_old {
             let _ = fs::remove_file(entry.path());
         }
     }
@@ -197,6 +199,7 @@ mod tests {
         let oldest_gone = !oldest.exists();
         std::fs::remove_dir_all(&dir).unwrap();
         assert!(oldest_gone, "the log beyond the count goes");
-        assert_eq!(remaining, MAX_LOG_COUNT);
+        // The run's own log comes next, which makes MAX_LOG_COUNT.
+        assert_eq!(remaining, MAX_LOG_COUNT - 1);
     }
 }
