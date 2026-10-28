@@ -47,9 +47,10 @@ impl AuthClient {
         }
 
         let new_token = self.fetch_new_token().await?;
+        let header = new_token.header_value();
         *token_guard = Some(new_token);
 
-        Ok(token_guard.as_ref().unwrap().header_value())
+        Ok(header)
     }
 
     async fn fetch_new_token(&self) -> anyhow::Result<AuthToken> {
