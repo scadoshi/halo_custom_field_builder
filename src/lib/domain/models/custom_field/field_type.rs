@@ -19,6 +19,8 @@ pub enum InvalidFieldType {
     EmptyOption,
     #[error("selection_options are only for field_type_id 2 and 3, not {0}")]
     OptionsWithoutSelection(u8),
+    #[error("selection_options cannot be empty for field_type_id {0}")]
+    SelectionWithoutOptions(u8),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -81,10 +83,11 @@ impl FieldType {
             10 => Ok(FieldType::Rich),
             _ => Err(InvalidFieldType::InvalidFieldTypeId(field_type_id)),
         }?;
-        if has_options && field_type.selection_options().is_none() {
-            return Err(InvalidFieldType::OptionsWithoutSelection(field_type_id));
+        match (has_options, field_type.selection_options().is_some()) {
+            (true, false) => Err(InvalidFieldType::OptionsWithoutSelection(field_type_id)),
+            (false, true) => Err(InvalidFieldType::SelectionWithoutOptions(field_type_id)),
+            _ => Ok(field_type),
         }
-        Ok(field_type)
     }
 
     pub fn input_type_id(&self) -> Option<u8> {
@@ -141,6 +144,14 @@ impl FieldType {
 mod tests {
     use super::*;
 
+    /// Options for the selection types, which need some, and none for the rest.
+    fn options_for(field_type_id: u8) -> Vec<String> {
+        match field_type_id {
+            2 | 3 => vec!["small".to_string()],
+            _ => vec![],
+        }
+    }
+
     #[test]
     fn every_field_type_id_round_trips_with_its_input_type_id() {
         let cases: &[(u8, Option<u8>)] = &[
@@ -157,7 +168,9 @@ mod tests {
             (10, None),
         ];
         for (field_type_id, input_type_id) in cases {
-            let field_type = FieldType::new(*field_type_id, *input_type_id, vec![]).unwrap();
+            let field_type =
+                FieldType::new(*field_type_id, *input_type_id, options_for(*field_type_id))
+                    .unwrap();
             assert_eq!(field_type.field_type_id(), *field_type_id);
             assert_eq!(field_type.input_type_id(), *input_type_id);
         }
@@ -170,7 +183,9 @@ mod tests {
             Some(0)
         );
         assert_eq!(
-            FieldType::new(2, None, vec![]).unwrap().input_type_id(),
+            FieldType::new(2, None, options_for(2))
+                .unwrap()
+                .input_type_id(),
             Some(0)
         );
         assert_eq!(
@@ -183,7 +198,9 @@ mod tests {
     fn an_input_type_id_is_ignored_by_types_that_have_none() {
         for id in [1, 3, 5, 6, 10] {
             assert_eq!(
-                FieldType::new(id, Some(5), vec![]).unwrap().input_type_id(),
+                FieldType::new(id, Some(5), options_for(id))
+                    .unwrap()
+                    .input_type_id(),
                 None
             );
         }
@@ -225,6 +242,12 @@ mod tests {
             assert_eq!(
                 FieldType::new(id, None, options.clone()),
                 Err(InvalidFieldType::OptionsWithoutSelection(id))
+            );
+        }
+        for id in [2, 3] {
+            assert_eq!(
+                FieldType::new(id, None, vec![]),
+                Err(InvalidFieldType::SelectionWithoutOptions(id))
             );
         }
     }

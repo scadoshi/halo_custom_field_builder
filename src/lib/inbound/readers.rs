@@ -229,6 +229,20 @@ mod tests {
     }
 
     #[test]
+    fn a_selection_type_without_options_is_refused_with_the_row() {
+        for field_type_id in [2, 3] {
+            let csv = format!(
+                "name,label,field_type_id,input_type_id,selection_options\n\
+                 size,size,2,0,\"small,large\"\n\
+                 empty,empty,{field_type_id},,\n"
+            );
+            let message = format!("{:#}", read(&csv).unwrap_err());
+            assert!(message.starts_with("row 3:"), "{message}");
+            assert!(message.contains("selection_options"), "{message}");
+        }
+    }
+
+    #[test]
     fn a_row_after_a_multi_line_cell_is_reported_by_its_line_in_the_file() {
         let csv = "name,label,field_type_id,input_type_id,selection_options\n\
                    notes,\"two\nlines\",1,,\n\
