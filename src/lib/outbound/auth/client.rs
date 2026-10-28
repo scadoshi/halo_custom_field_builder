@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use anyhow::Context;
 use reqwest::Client as ReqwestClient;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
@@ -12,12 +13,6 @@ struct TokenResponse {
     access_token: String,
     token_type: String,
     expires_in: i64,
-}
-
-#[derive(Debug, Deserialize)]
-struct ErrorResponse {
-    error: String,
-    error_description: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -70,34 +65,96 @@ impl AuthClient {
             .header("Content-Type", "application/x-www-form-urlencoded")
             .form(&token_request)
             .send()
-            .await?;
+            .await
+            .context("failed to send token request")?;
 
         let status = response.status();
-
-        if status == reqwest::StatusCode::UNAUTHORIZED {
-            anyhow::bail!("invalid credentials");
-        }
-
         let response_text = response
             .text()
             .await
-            .map_err(|e| anyhow::anyhow!("failed to read response: {}", e))?;
+            .context("failed to read token response")?;
 
-        if let Ok(error_response) = serde_json::from_str::<ErrorResponse>(&response_text) {
-            anyhow::bail!(
-                "{}: {}",
-                error_response.error,
-                error_response.error_description
-            );
+        // A failed request's body is an error from Halo, never a token.
+        if !status.is_success() {
+            anyhow::bail!("token request failed with status {status}: {response_text}");
         }
 
-        let token_response: TokenResponse = serde_json::from_str(&response_text)
-            .map_err(|e| anyhow::anyhow!("failed to parse token response: {}", e))?;
+        let token_response: TokenResponse =
+            serde_json::from_str(&response_text).context("failed to parse token response")?;
 
         Ok(AuthToken::new(
             token_response.access_token,
             token_response.token_type,
             token_response.expires_in,
         ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_server::{CLIENT_SECRET, Reply, TOKEN, TestServer};
+
+    async fn token_error(reply: Reply) -> anyhow::Error {
+        let server = TestServer::start(vec![reply]).await;
+        AuthClient::new(server.config())
+            .get_valid_token()
+            .await
+            .unwrap_err()
+    }
+
+    #[tokio::test]
+    async fn a_token_response_becomes_the_authorization_header() {
+        let server = TestServer::start(vec![TOKEN]).await;
+        let header = AuthClient::new(server.config())
+            .get_valid_token()
+            .await
+            .unwrap();
+        assert_eq!(header, "Bearer tok");
+        let requests = server.requests();
+        assert!(requests[0].body.contains("grant_type=client_credentials"));
+    }
+
+    #[tokio::test]
+    async fn a_failed_token_request_shows_the_status_and_body() {
+        let cases = [
+            (
+                Reply::Json(
+                    401,
+                    r#"{"error":"invalid_client","error_description":"bad client"}"#,
+                ),
+                "401",
+                "bad client",
+            ),
+            (
+                Reply::Json(400, r#"{"error":"unsupported_grant_type"}"#),
+                "400",
+                "unsupported_grant_type",
+            ),
+            (
+                Reply::Json(404, "<html><body>not here</body></html>"),
+                "404",
+                "not here",
+            ),
+            (Reply::Json(500, ""), "500", ""),
+        ];
+        for (reply, status, body) in cases {
+            let message = format!("{:#}", token_error(reply).await);
+            assert!(message.contains(status), "{status}: {message}");
+            assert!(message.contains(body), "{status}: {message}");
+            assert!(!message.contains(CLIENT_SECRET), "{status}: {message}");
+        }
+    }
+
+    #[tokio::test]
+    async fn an_unreadable_token_response_keeps_the_parse_error_as_its_cause() {
+        let error = token_error(Reply::Json(200, "<html>sign in</html>")).await;
+        assert!(
+            error
+                .root_cause()
+                .downcast_ref::<serde_json::Error>()
+                .is_some(),
+            "{error:#}"
+        );
     }
 }
