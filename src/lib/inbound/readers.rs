@@ -123,13 +123,17 @@ fn column(row: &StringRecord, index: usize) -> anyhow::Result<&str> {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
     use super::*;
 
     fn read(csv: &str) -> anyhow::Result<Vec<CustomField>> {
+        // Tests run in parallel, so each call writes its own file.
+        static NEXT: AtomicUsize = AtomicUsize::new(0);
         let path = std::env::temp_dir().join(format!(
             "halo_fields_{}_{}.csv",
             std::process::id(),
-            csv.len()
+            NEXT.fetch_add(1, Ordering::Relaxed)
         ));
         std::fs::write(&path, csv).unwrap();
         let config = Config::from_lookup(|key| match key {
