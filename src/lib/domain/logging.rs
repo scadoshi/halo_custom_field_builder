@@ -116,16 +116,12 @@ pub fn log_import_result(result: &ImportResults) -> anyhow::Result<()> {
     info!("import results summary");
     info!("{}", "=".repeat(80));
 
-    for field in &result.successful {
-        info!("✓ successfully imported: {}", field.label);
+    for label in &result.successful {
+        info!("✓ successfully imported: {label}");
     }
 
-    for field in &result.failed {
-        error!(
-            "✗ failed to import: {} ({})",
-            field.label,
-            field.error.as_ref().unwrap_or(&"unknown error".to_string())
-        );
+    for failure in &result.failed {
+        error!("✗ failed to import: {} ({})", failure.label, failure.error);
     }
 
     info!("\n{}", "=".repeat(80));

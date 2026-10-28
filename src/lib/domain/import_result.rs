@@ -1,51 +1,30 @@
-use chrono::{DateTime, Local};
 use colored::Colorize;
-use serde::Serialize;
 
-#[derive(Debug, Serialize)]
-pub struct FieldResult {
+/// A field Halo refused, with the reason.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Failure {
     pub label: String,
-    pub success: bool,
-    pub error: Option<String>,
-    pub timestamp: DateTime<Local>,
+    pub error: String,
 }
 
-#[derive(Debug)]
+/// The labels of the fields a run created and the fields it failed on.
+#[derive(Debug, Default)]
 pub struct ImportResults {
-    pub successful: Vec<FieldResult>,
-    pub failed: Vec<FieldResult>,
-}
-
-impl Default for ImportResults {
-    fn default() -> Self {
-        Self::new()
-    }
+    pub successful: Vec<String>,
+    pub failed: Vec<Failure>,
 }
 
 impl ImportResults {
     pub fn new() -> Self {
-        Self {
-            successful: Vec::new(),
-            failed: Vec::new(),
-        }
+        Self::default()
     }
 
     pub fn add_success(&mut self, label: String) {
-        self.successful.push(FieldResult {
-            label,
-            success: true,
-            error: None,
-            timestamp: Local::now(),
-        });
+        self.successful.push(label);
     }
 
     pub fn add_failure(&mut self, label: String, error: String) {
-        self.failed.push(FieldResult {
-            label,
-            success: false,
-            error: Some(error),
-            timestamp: Local::now(),
-        });
+        self.failed.push(Failure { label, error });
     }
 
     pub fn log_summary(&self) {
@@ -69,11 +48,11 @@ impl ImportResults {
 
         if !self.failed.is_empty() {
             println!("\n{}", "Failed Fields:".bright_red().bold());
-            for result in &self.failed {
+            for failure in &self.failed {
                 println!(
                     "• {} ({})",
-                    result.label.bright_yellow(),
-                    result.error.as_ref().unwrap().bright_red()
+                    failure.label.bright_yellow(),
+                    failure.error.bright_red()
                 );
             }
         }
