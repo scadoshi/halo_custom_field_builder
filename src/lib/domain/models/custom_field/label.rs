@@ -25,10 +25,6 @@ impl Label {
             Ok(Self(label.to_string()))
         }
     }
-
-    pub fn id(&self) -> u8 {
-        self.0.as_bytes()[0]
-    }
 }
 
 impl Display for Label {
