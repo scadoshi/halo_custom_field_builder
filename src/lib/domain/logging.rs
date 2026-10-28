@@ -79,14 +79,14 @@ fn cleanup_old_logs(logs_dir: &Path) -> anyhow::Result<()> {
 
     let cutoff_date = Local::now() - Duration::days(MAX_LOG_AGE);
 
-    for entry in log_files.iter().skip(MAX_LOG_COUNT) {
-        if let Ok(metadata) = entry.metadata()
-            && let Ok(modified) = metadata.modified()
-        {
-            let modified: DateTime<Local> = modified.into();
-            if modified < cutoff_date {
-                let _ = fs::remove_file(entry.path());
-            }
+    // Newest first, so everything past MAX_LOG_COUNT is surplus.
+    for (index, entry) in log_files.iter().enumerate() {
+        let too_old = entry
+            .metadata()
+            .and_then(|metadata| metadata.modified())
+            .is_ok_and(|modified| DateTime::<Local>::from(modified) < cutoff_date);
+        if index >= MAX_LOG_COUNT || too_old {
+            let _ = fs::remove_file(entry.path());
         }
     }
 
@@ -130,48 +130,73 @@ pub fn log_import_result(result: &ImportResults) -> anyhow::Result<()> {
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
     use std::time::{Duration as StdDuration, SystemTime};
 
     use super::*;
 
-    #[test]
-    fn cleanup_deletes_only_logs_beyond_the_count_that_are_also_past_the_age() {
-        let dir = std::env::temp_dir().join(format!("halo_logs_{}", std::process::id()));
+    const DAY: StdDuration = StdDuration::from_secs(60 * 60 * 24);
+
+    /// An empty directory unique to `name` and this process.
+    fn scratch_dir(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("halo_logs_{name}_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
-        let old =
-            SystemTime::now() - StdDuration::from_secs(60 * 60 * 24 * (MAX_LOG_AGE as u64 + 1));
-        // MAX_LOG_COUNT fresh logs, then two over the count: one fresh, one old.
-        for i in 0..MAX_LOG_COUNT {
-            std::fs::write(dir.join(format!("fresh_{i}.log")), "").unwrap();
-        }
-        std::fs::write(dir.join("over_count_fresh.log"), "").unwrap();
-        let stale = dir.join("over_count_old.log");
-        std::fs::write(&stale, "").unwrap();
+        dir
+    }
+
+    /// Writes an empty file last modified `age` ago.
+    fn write_aged(path: &Path, age: StdDuration) {
+        std::fs::write(path, "").unwrap();
         std::fs::File::options()
             .write(true)
-            .open(&stale)
+            .open(path)
             .unwrap()
-            .set_modified(old)
+            .set_modified(SystemTime::now() - age)
             .unwrap();
+    }
+
+    #[test]
+    fn cleanup_deletes_a_log_past_the_age_even_under_the_count() {
+        let dir = scratch_dir("age");
+        write_aged(&dir.join("fresh.log"), StdDuration::ZERO);
+        let old = dir.join("old.log");
+        write_aged(&old, DAY * (MAX_LOG_AGE as u32 + 1));
         let other = dir.join("notes.txt");
-        std::fs::write(&other, "").unwrap();
-        std::fs::File::options()
-            .write(true)
-            .open(&other)
-            .unwrap()
-            .set_modified(old)
-            .unwrap();
+        write_aged(&other, DAY * (MAX_LOG_AGE as u32 + 1));
+
+        cleanup_old_logs(&dir).unwrap();
+
+        let (old_gone, fresh_kept, other_kept) = (
+            !old.exists(),
+            dir.join("fresh.log").exists(),
+            other.exists(),
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
+        assert!(old_gone, "the old log goes");
+        assert!(fresh_kept, "the fresh log stays");
+        assert!(other_kept, "a file that is not a log stays");
+    }
+
+    #[test]
+    fn cleanup_keeps_only_the_newest_logs_up_to_the_count() {
+        let dir = scratch_dir("count");
+        for i in 0..MAX_LOG_COUNT {
+            write_aged(
+                &dir.join(format!("fresh_{i}.log")),
+                StdDuration::from_secs(i as u64),
+            );
+        }
+        // Still fresh, but older than every other log.
+        let oldest = dir.join("oldest.log");
+        write_aged(&oldest, StdDuration::from_secs(60 * 60));
 
         cleanup_old_logs(&dir).unwrap();
 
         let remaining = std::fs::read_dir(&dir).unwrap().count();
-        let stale_gone = !stale.exists();
+        let oldest_gone = !oldest.exists();
         std::fs::remove_dir_all(&dir).unwrap();
-        assert!(stale_gone);
-        assert_eq!(
-            remaining,
-            MAX_LOG_COUNT + 2,
-            "the fresh over-count log and the txt stay"
-        );
+        assert!(oldest_gone, "the log beyond the count goes");
+        assert_eq!(remaining, MAX_LOG_COUNT);
     }
 }
