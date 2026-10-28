@@ -1,3 +1,5 @@
+use std::process::ExitCode;
+
 use halo_custom_field_builder::config::Config;
 use halo_custom_field_builder::domain::logging;
 use halo_custom_field_builder::inbound::readers::CsvReader;
@@ -7,8 +9,6 @@ use halo_custom_field_builder::outbound::field_client::FieldClient;
 use log::{error, info};
 
 async fn run() -> anyhow::Result<()> {
-    logging::setup_logging()?;
-
     info!("starting application...\n");
 
     info!("loading configuration...");
@@ -62,11 +62,15 @@ async fn run() -> anyhow::Result<()> {
 }
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    if let Err(e) = run().await {
-        error!("\n✗ error: {}", e);
-        std::process::exit(1);
+async fn main() -> ExitCode {
+    // Without a logger, error! prints nothing, so this failure goes straight to stderr.
+    if let Err(e) = logging::setup_logging() {
+        eprintln!("✗ error: {e:#}");
+        return ExitCode::FAILURE;
     }
-
-    Ok(())
+    if let Err(e) = run().await {
+        error!("\n✗ error: {e:#}");
+        return ExitCode::FAILURE;
+    }
+    ExitCode::SUCCESS
 }
