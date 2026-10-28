@@ -31,7 +31,7 @@ impl CsvReader {
             .with_context(|| format!("failed to open {}", config.source_file_name))
     }
 
-    fn get_field_positions(&self, headers: &StringRecord) -> anyhow::Result<FieldPositions> {
+    fn column_positions(&self, headers: &StringRecord) -> anyhow::Result<FieldPositions> {
         Ok(FieldPositions {
             name: headers
                 .iter()
@@ -65,7 +65,7 @@ impl CsvReader {
         let mut reader = self.open_csv(config)?;
 
         let headers = reader.headers()?;
-        let positions = self.get_field_positions(headers)?;
+        let positions = self.column_positions(headers)?;
 
         for (index, result) in reader.records().enumerate() {
             // The line a record starts on; counting records misses multi-line cells.

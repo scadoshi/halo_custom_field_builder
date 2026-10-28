@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::domain::models::custom_field::field_type::InvalidFieldType;
+use crate::domain::models::custom_field::field_type::ParseFieldTypeError;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SingleSelectInputType {
@@ -20,14 +20,14 @@ impl SingleSelectInputType {
 }
 
 impl TryFrom<u8> for SingleSelectInputType {
-    type Error = InvalidFieldType;
+    type Error = ParseFieldTypeError;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
             0 => Ok(SingleSelectInputType::Standard),
             1 => Ok(SingleSelectInputType::Tree),
             2 => Ok(SingleSelectInputType::Radio),
-            _ => Err(InvalidFieldType::InvalidInputType {
+            _ => Err(ParseFieldTypeError::InvalidInputType {
                 field_type_id: 2,
                 input_type_id: value,
             }),

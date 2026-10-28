@@ -3,7 +3,7 @@ use std::process::ExitCode;
 use halo_custom_field_builder::config::Config;
 use halo_custom_field_builder::domain::logging;
 use halo_custom_field_builder::inbound::readers::CsvReader;
-use halo_custom_field_builder::inbound::screens::{RunMode, ScreenManager};
+use halo_custom_field_builder::inbound::screens::{Menu, RunMode};
 use halo_custom_field_builder::outbound::auth::client::AuthClient;
 use halo_custom_field_builder::outbound::field_client::FieldClient;
 use log::{error, info};
@@ -18,7 +18,7 @@ async fn run() -> anyhow::Result<()> {
     info!("authenticating with api...");
     let auth_client = AuthClient::new(config.clone());
 
-    let token = auth_client.get_valid_token().await.map_err(|e| {
+    let token = auth_client.fetch_token().await.map_err(|e| {
         error!("✗ authentication failed: {}", e);
         e
     })?;
@@ -31,18 +31,18 @@ async fn run() -> anyhow::Result<()> {
     let fields = reader.read_fields(&config)?;
     info!("✓ successfully validated {} fields\n", fields.len());
 
-    let screen_manager = ScreenManager::new(fields);
-    screen_manager.show_initial_stats(token.split_whitespace().next().unwrap_or("unknown"))?;
+    let menu = Menu::new(fields);
+    menu.show_initial_stats(token.split_whitespace().next().unwrap_or("unknown"))?;
 
     let field_client = FieldClient::new(config.clone(), auth_client);
 
-    match screen_manager.get_run_mode()? {
+    match menu.prompt_run_mode()? {
         RunMode::Import => {
             info!("\n{}", "=".repeat(80));
             info!("starting full import mode");
             info!("{}\n", "=".repeat(80));
 
-            let results = screen_manager.process_all_fields(&field_client).await?;
+            let results = menu.process_all_fields(&field_client).await?;
             results.log_summary();
         }
         RunMode::Debug => {
@@ -50,7 +50,7 @@ async fn run() -> anyhow::Result<()> {
             info!("starting debug mode");
             info!("{}\n", "=".repeat(80));
 
-            let results = screen_manager.debug_mode(&field_client).await?;
+            let results = menu.debug_mode(&field_client).await?;
             results.log_summary();
         }
         RunMode::Quit => {

@@ -21,11 +21,11 @@ pub enum DebugAction {
     Quit,
 }
 
-pub struct ScreenManager {
+pub struct Menu {
     fields: Vec<CustomField>,
 }
 
-impl ScreenManager {
+impl Menu {
     pub fn new(fields: Vec<CustomField>) -> Self {
         Self { fields }
     }
@@ -51,7 +51,7 @@ impl ScreenManager {
         Ok(())
     }
 
-    pub fn get_run_mode(&self) -> anyhow::Result<RunMode> {
+    pub fn prompt_run_mode(&self) -> anyhow::Result<RunMode> {
         self.run_mode_from(&mut io::stdin().lock())
     }
 
@@ -253,8 +253,8 @@ fn read_choice(input: &mut impl BufRead) -> io::Result<Option<String>> {
 mod tests {
     use super::*;
 
-    fn menu() -> ScreenManager {
-        ScreenManager::new(vec![field()])
+    fn menu() -> Menu {
+        Menu::new(vec![field()])
     }
 
     fn field() -> CustomField {

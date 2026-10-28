@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::domain::models::custom_field::field_type::InvalidFieldType;
+use crate::domain::models::custom_field::field_type::ParseFieldTypeError;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TextInputType {
@@ -9,7 +9,7 @@ pub enum TextInputType {
     Money,
     Alphanumeric,
     Decimal,
-    URL,
+    Url,
     Password,
 }
 
@@ -21,14 +21,14 @@ impl TextInputType {
             TextInputType::Money => 2,
             TextInputType::Alphanumeric => 3,
             TextInputType::Decimal => 4,
-            TextInputType::URL => 5,
+            TextInputType::Url => 5,
             TextInputType::Password => 6,
         }
     }
 }
 
 impl TryFrom<u8> for TextInputType {
-    type Error = InvalidFieldType;
+    type Error = ParseFieldTypeError;
     fn try_from(input_type_id: u8) -> Result<Self, Self::Error> {
         match input_type_id {
             0 => Ok(TextInputType::Anything),
@@ -36,9 +36,9 @@ impl TryFrom<u8> for TextInputType {
             2 => Ok(TextInputType::Money),
             3 => Ok(TextInputType::Alphanumeric),
             4 => Ok(TextInputType::Decimal),
-            5 => Ok(TextInputType::URL),
+            5 => Ok(TextInputType::Url),
             6 => Ok(TextInputType::Password),
-            _ => Err(InvalidFieldType::InvalidInputType {
+            _ => Err(ParseFieldTypeError::InvalidInputType {
                 field_type_id: 0,
                 input_type_id,
             }),

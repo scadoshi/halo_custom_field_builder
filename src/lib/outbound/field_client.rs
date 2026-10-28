@@ -36,7 +36,7 @@ impl FieldClient {
         let wrapped_http_custom_field = vec![http_custom_field];
 
         // The cached token, or a new one when it is about to expire.
-        let auth_header = self.auth_client.get_valid_token().await?;
+        let auth_header = self.auth_client.fetch_token().await?;
 
         debug!("sending field creation request for: {}", custom_field.label);
 
@@ -96,7 +96,7 @@ mod tests {
         let server = TestServer::start(vec![SHORT_TOKEN, CREATED, NEXT_TOKEN, CREATED]).await;
         let config = server.config();
         let auth = AuthClient::new(config.clone());
-        auth.get_valid_token().await.unwrap();
+        auth.fetch_token().await.unwrap();
         let client = FieldClient::new(config, auth);
 
         client.create_field(&field()).await.unwrap();

@@ -4,18 +4,18 @@ pub mod name;
 
 use thiserror::Error;
 
-use crate::domain::models::custom_field::field_type::{FieldType, InvalidFieldType};
-use crate::domain::models::custom_field::label::{InvalidLabel, Label};
-use crate::domain::models::custom_field::name::{InvalidName, Name};
+use crate::domain::models::custom_field::field_type::{FieldType, ParseFieldTypeError};
+use crate::domain::models::custom_field::label::{Label, ParseLabelError};
+use crate::domain::models::custom_field::name::{Name, ParseNameError};
 
 #[derive(Error, Debug)]
 pub enum InvalidCustomField {
     #[error("name {0}")]
-    Name(#[from] InvalidName),
+    Name(#[from] ParseNameError),
     #[error("label {0}")]
-    Label(#[from] InvalidLabel),
+    Label(#[from] ParseLabelError),
     #[error(transparent)]
-    FieldType(#[from] InvalidFieldType),
+    FieldType(#[from] ParseFieldTypeError),
 }
 
 #[derive(Debug, Clone)]

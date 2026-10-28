@@ -7,7 +7,7 @@ use crate::domain::models::custom_field::field_type::input_types::single_select_
 use crate::domain::models::custom_field::field_type::input_types::text_input_type::TextInputType;
 
 #[derive(Debug, Error, PartialEq, Eq)]
-pub enum InvalidFieldType {
+pub enum ParseFieldTypeError {
     #[error("field_type_id {0} is not a field type")]
     InvalidFieldTypeId(u8),
     #[error("input_type_id {input_type_id} is not an input type of field_type_id {field_type_id}")]
@@ -48,13 +48,13 @@ impl FieldType {
         field_type_id: u8,
         input_type_id: Option<u8>,
         selection_options: Vec<String>,
-    ) -> Result<Self, InvalidFieldType> {
+    ) -> Result<Self, ParseFieldTypeError> {
         let selection_options: Vec<String> = selection_options
             .iter()
             .map(|option| option.trim().to_string())
             .collect();
         if selection_options.iter().any(String::is_empty) {
-            return Err(InvalidFieldType::EmptyOption);
+            return Err(ParseFieldTypeError::EmptyOption);
         }
         let has_options = !selection_options.is_empty();
         let field_type = match field_type_id {
@@ -81,11 +81,11 @@ impl FieldType {
             5 => Ok(FieldType::Time),
             6 => Ok(FieldType::Checkbox),
             10 => Ok(FieldType::Rich),
-            _ => Err(InvalidFieldType::InvalidFieldTypeId(field_type_id)),
+            _ => Err(ParseFieldTypeError::InvalidFieldTypeId(field_type_id)),
         }?;
         match (has_options, field_type.selection_options().is_some()) {
-            (true, false) => Err(InvalidFieldType::OptionsWithoutSelection(field_type_id)),
-            (false, true) => Err(InvalidFieldType::SelectionWithoutOptions(field_type_id)),
+            (true, false) => Err(ParseFieldTypeError::OptionsWithoutSelection(field_type_id)),
+            (false, true) => Err(ParseFieldTypeError::SelectionWithoutOptions(field_type_id)),
             _ => Ok(field_type),
         }
     }
@@ -210,12 +210,12 @@ mod tests {
     fn unknown_ids_are_refused() {
         assert_eq!(
             FieldType::new(7, None, vec![]),
-            Err(InvalidFieldType::InvalidFieldTypeId(7))
+            Err(ParseFieldTypeError::InvalidFieldTypeId(7))
         );
         for (field_type_id, input_type_id) in [(0, 7), (2, 3), (4, 2)] {
             assert_eq!(
                 FieldType::new(field_type_id, Some(input_type_id), vec![]),
-                Err(InvalidFieldType::InvalidInputType {
+                Err(ParseFieldTypeError::InvalidInputType {
                     field_type_id,
                     input_type_id
                 })
@@ -241,13 +241,13 @@ mod tests {
         for id in [0, 1, 4, 5, 6, 10] {
             assert_eq!(
                 FieldType::new(id, None, options.clone()),
-                Err(InvalidFieldType::OptionsWithoutSelection(id))
+                Err(ParseFieldTypeError::OptionsWithoutSelection(id))
             );
         }
         for id in [2, 3] {
             assert_eq!(
                 FieldType::new(id, None, vec![]),
-                Err(InvalidFieldType::SelectionWithoutOptions(id))
+                Err(ParseFieldTypeError::SelectionWithoutOptions(id))
             );
         }
     }

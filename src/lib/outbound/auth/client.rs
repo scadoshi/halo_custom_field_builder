@@ -37,7 +37,7 @@ impl AuthClient {
         }
     }
 
-    pub async fn get_valid_token(&self) -> anyhow::Result<String> {
+    pub async fn fetch_token(&self) -> anyhow::Result<String> {
         let mut token_guard = self.current_token.lock().await;
 
         if let Some(token) = token_guard.as_ref()
@@ -46,14 +46,14 @@ impl AuthClient {
             return Ok(token.header_value());
         }
 
-        let new_token = self.fetch_new_token().await?;
+        let new_token = self.request_token().await?;
         let header = new_token.header_value();
         *token_guard = Some(new_token);
 
         Ok(header)
     }
 
-    async fn fetch_new_token(&self) -> anyhow::Result<AuthToken> {
+    async fn request_token(&self) -> anyhow::Result<AuthToken> {
         let token_request = TokenRequest {
             client_id: self.config.client_id.clone(),
             client_secret: self.config.client_secret.clone(),
@@ -99,7 +99,7 @@ mod tests {
     async fn token_error(reply: Reply) -> anyhow::Error {
         let server = TestServer::start(vec![reply]).await;
         AuthClient::new(server.config())
-            .get_valid_token()
+            .fetch_token()
             .await
             .unwrap_err()
     }
@@ -108,7 +108,7 @@ mod tests {
     async fn a_token_response_becomes_the_authorization_header() {
         let server = TestServer::start(vec![TOKEN]).await;
         let header = AuthClient::new(server.config())
-            .get_valid_token()
+            .fetch_token()
             .await
             .unwrap();
         assert_eq!(header, "Bearer tok");
@@ -173,7 +173,7 @@ mod tests {
             let message = format!(
                 "{:#}",
                 AuthClient::new(server.config())
-                    .get_valid_token()
+                    .fetch_token()
                     .await
                     .unwrap_err()
             );

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum InvalidName {
+pub enum ParseNameError {
     #[error("cannot be empty")]
     Empty,
     #[error("cannot be longer than 64 characters")]
@@ -17,17 +17,17 @@ pub enum InvalidName {
 pub struct Name(String);
 
 impl Name {
-    pub fn new(name: &str) -> Result<Self, InvalidName> {
+    pub fn new(name: &str) -> Result<Self, ParseNameError> {
         let trimmed = name.trim();
         if trimmed.is_empty() {
-            Err(InvalidName::Empty)
+            Err(ParseNameError::Empty)
         } else if trimmed.chars().count() > 64 {
-            Err(InvalidName::TooLong)
+            Err(ParseNameError::TooLong)
         } else if !trimmed
             .chars()
             .all(|c| c.is_ascii_alphanumeric() || c == '_')
         {
-            Err(InvalidName::InvalidCharacters)
+            Err(ParseNameError::InvalidCharacters)
         } else {
             Ok(Name(trimmed.to_string()))
         }
@@ -53,16 +53,16 @@ mod tests {
         assert!(Name::new(&"x".repeat(64)).is_ok());
         assert!(matches!(
             Name::new(&"x".repeat(65)),
-            Err(InvalidName::TooLong)
+            Err(ParseNameError::TooLong)
         ));
-        assert!(matches!(Name::new(""), Err(InvalidName::Empty)));
+        assert!(matches!(Name::new(""), Err(ParseNameError::Empty)));
         assert!(matches!(
             Name::new("pizza-size"),
-            Err(InvalidName::InvalidCharacters)
+            Err(ParseNameError::InvalidCharacters)
         ));
         assert!(matches!(
             Name::new("pizza size"),
-            Err(InvalidName::InvalidCharacters)
+            Err(ParseNameError::InvalidCharacters)
         ));
     }
 
@@ -70,7 +70,7 @@ mod tests {
     fn a_name_is_ascii_letters_digits_and_underscores_only() {
         for name in ["pizzá", "名前", "größe", "x\u{200b}y", &"é".repeat(64)] {
             assert!(
-                matches!(Name::new(name), Err(InvalidName::InvalidCharacters)),
+                matches!(Name::new(name), Err(ParseNameError::InvalidCharacters)),
                 "{name:?}"
             );
         }

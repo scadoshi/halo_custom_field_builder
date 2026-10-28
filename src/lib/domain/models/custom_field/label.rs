@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum InvalidLabel {
+pub enum ParseLabelError {
     #[error("cannot be empty")]
     Empty,
     #[error("cannot be longer than 256 characters")]
@@ -15,12 +15,12 @@ pub enum InvalidLabel {
 pub struct Label(String);
 
 impl Label {
-    pub fn new(label: &str) -> Result<Self, InvalidLabel> {
+    pub fn new(label: &str) -> Result<Self, ParseLabelError> {
         let trimmed = label.trim();
         if trimmed.is_empty() {
-            Err(InvalidLabel::Empty)
+            Err(ParseLabelError::Empty)
         } else if trimmed.chars().count() > 256 {
-            Err(InvalidLabel::TooLong)
+            Err(ParseLabelError::TooLong)
         } else {
             Ok(Self(trimmed.to_string()))
         }
@@ -40,12 +40,12 @@ mod tests {
     #[test]
     fn a_label_is_anything_visible_up_to_256_characters() {
         assert!(Label::new("pizza size").is_ok());
-        assert!(matches!(Label::new(""), Err(InvalidLabel::Empty)));
-        assert!(matches!(Label::new("   "), Err(InvalidLabel::Empty)));
+        assert!(matches!(Label::new(""), Err(ParseLabelError::Empty)));
+        assert!(matches!(Label::new("   "), Err(ParseLabelError::Empty)));
         assert!(Label::new(&"x".repeat(256)).is_ok());
         assert!(matches!(
             Label::new(&"x".repeat(257)),
-            Err(InvalidLabel::TooLong)
+            Err(ParseLabelError::TooLong)
         ));
     }
 
@@ -58,7 +58,7 @@ mod tests {
         assert!(Label::new(&"é".repeat(256)).is_ok());
         assert!(matches!(
             Label::new(&"é".repeat(257)),
-            Err(InvalidLabel::TooLong)
+            Err(ParseLabelError::TooLong)
         ));
     }
 }
