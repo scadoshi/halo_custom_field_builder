@@ -23,7 +23,7 @@ impl Name {
         let trimmed = name.trim();
         if trimmed.is_empty() {
             Err(InvalidName::Empty)
-        } else if trimmed.len() > 64 {
+        } else if trimmed.chars().count() > 64 {
             Err(InvalidName::TooLong)
         } else if !trimmed.chars().all(|c| c.is_alphanumeric() || c == '_') {
             Err(InvalidName::InvalidCharacters)
@@ -65,6 +65,15 @@ mod tests {
         assert!(matches!(
             Name::new("pizza size"),
             Err(InvalidName::InvalidCharacters)
+        ));
+    }
+
+    #[test]
+    fn a_name_is_measured_in_characters() {
+        assert!(Name::new(&"é".repeat(64)).is_ok());
+        assert!(matches!(
+            Name::new(&"é".repeat(65)),
+            Err(InvalidName::TooLong)
         ));
     }
 }

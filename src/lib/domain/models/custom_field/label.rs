@@ -19,10 +19,10 @@ impl Label {
         let trimmed = label.trim();
         if trimmed.is_empty() {
             Err(InvalidLabel::Empty)
-        } else if trimmed.len() > 256 {
+        } else if trimmed.chars().count() > 256 {
             Err(InvalidLabel::TooLong)
         } else {
-            Ok(Self(label.to_string()))
+            Ok(Self(trimmed.to_string()))
         }
     }
 }
@@ -45,6 +45,19 @@ mod tests {
         assert!(Label::new(&"x".repeat(256)).is_ok());
         assert!(matches!(
             Label::new(&"x".repeat(257)),
+            Err(InvalidLabel::TooLong)
+        ));
+    }
+
+    #[test]
+    fn a_label_is_stored_trimmed_and_measured_in_characters() {
+        assert_eq!(
+            Label::new(" pizza size ").unwrap().to_string(),
+            "pizza size"
+        );
+        assert!(Label::new(&"é".repeat(256)).is_ok());
+        assert!(matches!(
+            Label::new(&"é".repeat(257)),
             Err(InvalidLabel::TooLong)
         ));
     }
