@@ -1,5 +1,5 @@
 use anyhow::{Context, anyhow};
-use csv::{Reader, StringRecord};
+use csv::{Position, Reader, StringRecord};
 
 use crate::config::Config;
 use crate::domain::models::custom_field::CustomField;
@@ -67,8 +67,14 @@ impl CsvReader {
         let headers = reader.headers()?;
         let positions = self.get_field_positions(headers)?;
 
-        for (raw_row_index, result) in reader.records().enumerate() {
-            let row_index = raw_row_index + 2;
+        for (index, result) in reader.records().enumerate() {
+            // The line a record starts on; counting records misses multi-line cells.
+            let fallback = u64::try_from(index).unwrap_or(u64::MAX).saturating_add(2);
+            let row_index = match &result {
+                Ok(row) => row.position(),
+                Err(e) => e.position(),
+            }
+            .map_or(fallback, Position::line);
             let row_data = result.context(format!("row {}: failed to read entry", row_index))?;
             let cell = |index| column(&row_data, index).with_context(|| format!("row {row_index}"));
 
@@ -220,5 +226,23 @@ mod tests {
         let message = format!("{:#}", read(csv).unwrap_err());
         assert!(message.contains("row 3"), "{message}");
         assert!(message.contains("selection_options"), "{message}");
+    }
+
+    #[test]
+    fn a_row_after_a_multi_line_cell_is_reported_by_its_line_in_the_file() {
+        let csv = "name,label,field_type_id,input_type_id,selection_options\n\
+                   notes,\"two\nlines\",1,,\n\
+                   broken,broken,nine,0,\n";
+        let message = format!("{:#}", read(csv).unwrap_err());
+        assert!(message.starts_with("row 4:"), "{message}");
+    }
+
+    #[test]
+    fn a_row_with_the_wrong_number_of_cells_is_reported_by_its_line() {
+        let csv = "name,label,field_type_id,input_type_id,selection_options\n\
+                   notes,\"two\nlines\",1,,\n\
+                   short,short\n";
+        let message = format!("{:#}", read(csv).unwrap_err());
+        assert!(message.starts_with("row 4:"), "{message}");
     }
 }
