@@ -103,4 +103,23 @@ mod tests {
             "input_type_id 2 is not an input type of field_type_id 4"
         );
     }
+
+    #[test]
+    fn options_are_trimmed_and_an_empty_one_is_refused() {
+        let field =
+            CustomField::new("size", "size", 2, None, Some(" small , large ".to_string())).unwrap();
+        assert_eq!(
+            field.field_type.selection_options(),
+            Some(vec!["small".to_string(), "large".to_string()])
+        );
+        for options in ["small,,large", "small,", " , "] {
+            let message = CustomField::new("size", "size", 3, None, Some(options.to_string()))
+                .unwrap_err()
+                .to_string();
+            assert_eq!(
+                message, "selection_options cannot hold an empty option",
+                "{options:?}"
+            );
+        }
+    }
 }

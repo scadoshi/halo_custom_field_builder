@@ -15,6 +15,8 @@ pub enum InvalidFieldType {
         field_type_id: u8,
         input_type_id: u8,
     },
+    #[error("selection_options cannot hold an empty option")]
+    EmptyOption,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -43,6 +45,13 @@ impl FieldType {
         input_type_id: Option<u8>,
         selection_options: Vec<String>,
     ) -> Result<Self, InvalidFieldType> {
+        let selection_options: Vec<String> = selection_options
+            .iter()
+            .map(|option| option.trim().to_string())
+            .collect();
+        if selection_options.iter().any(String::is_empty) {
+            return Err(InvalidFieldType::EmptyOption);
+        }
         match field_type_id {
             0 => {
                 let input_type_id = input_type_id.unwrap_or(0);
