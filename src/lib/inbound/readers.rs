@@ -207,4 +207,14 @@ mod tests {
             "no column 3 in a row of 2"
         );
     }
+
+    #[test]
+    fn options_on_a_type_without_options_are_refused_with_the_row() {
+        let csv = "name,label,field_type_id,input_type_id,selection_options\n\
+                   size,size,2,0,\"small,large\"\n\
+                   notes,notes,1,,\"small,large\"\n";
+        let message = format!("{:#}", read(csv).unwrap_err());
+        assert!(message.contains("row 3"), "{message}");
+        assert!(message.contains("selection_options"), "{message}");
+    }
 }

@@ -17,6 +17,8 @@ pub enum InvalidFieldType {
     },
     #[error("selection_options cannot hold an empty option")]
     EmptyOption,
+    #[error("selection_options are only for field_type_id 2 and 3, not {0}")]
+    OptionsWithoutSelection(u8),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -52,7 +54,8 @@ impl FieldType {
         if selection_options.iter().any(String::is_empty) {
             return Err(InvalidFieldType::EmptyOption);
         }
-        match field_type_id {
+        let has_options = !selection_options.is_empty();
+        let field_type = match field_type_id {
             0 => {
                 let input_type_id = input_type_id.unwrap_or(0);
                 let input_type = TextInputType::try_from(input_type_id)?;
@@ -77,7 +80,11 @@ impl FieldType {
             6 => Ok(FieldType::Checkbox),
             10 => Ok(FieldType::Rich),
             _ => Err(InvalidFieldType::InvalidFieldTypeId(field_type_id)),
+        }?;
+        if has_options && field_type.selection_options().is_none() {
+            return Err(InvalidFieldType::OptionsWithoutSelection(field_type_id));
         }
+        Ok(field_type)
     }
 
     pub fn input_type_id(&self) -> Option<u8> {
@@ -214,12 +221,12 @@ mod tests {
                 .selection_options(),
             Some(options.clone())
         );
-        assert_eq!(
-            FieldType::new(0, None, options)
-                .unwrap()
-                .selection_options(),
-            None
-        );
+        for id in [0, 1, 4, 5, 6, 10] {
+            assert_eq!(
+                FieldType::new(id, None, options.clone()),
+                Err(InvalidFieldType::OptionsWithoutSelection(id))
+            );
+        }
     }
 
     #[test]
