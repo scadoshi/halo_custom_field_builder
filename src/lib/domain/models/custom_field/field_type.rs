@@ -112,9 +112,9 @@ impl FieldType {
         }
     }
 
-    /// returns options as one comma separated string
-    /// removing commas from options themselves
-    /// avoiding conflicts when posting to halo
+    /// The options joined with `", "`, the form Halo's `new_values` takes.
+    /// Halo splits on commas, so a comma inside an option is dropped. Options
+    /// read from the CSV never hold one, because the reader splits on commas.
     pub fn selection_options_string(&self) -> Option<String> {
         self.selection_options().map(|options| {
             options
