@@ -3,7 +3,7 @@ use std::fs::OpenOptions;
 use std::path::Path;
 
 use anyhow::Context;
-use chrono::{DateTime, Duration, Local};
+use chrono::{DateTime, Local, TimeDelta};
 use log::LevelFilter;
 use simplelog::{
     ColorChoice, CombinedLogger, ConfigBuilder, TermLogger, TerminalMode, WriteLogger,
@@ -11,7 +11,7 @@ use simplelog::{
 
 use crate::inbound::screens::RULE;
 
-const MAX_LOG_AGE: i64 = 7;
+const MAX_LOG_AGE: TimeDelta = TimeDelta::days(7);
 const MAX_LOG_COUNT: usize = 100;
 /// Logs cleanup keeps, leaving room for the one the run creates next.
 const KEPT_BEFORE_RUN: usize = MAX_LOG_COUNT.saturating_sub(1);
@@ -23,7 +23,7 @@ pub fn setup_logging() -> anyhow::Result<()> {
     cleanup_old_logs(logs_dir)?;
 
     let timestamp = Local::now().format("%Y-%m-%d_%H-%M-%S");
-    let log_file = logs_dir.join(format!("run_{}.log", timestamp));
+    let log_file = logs_dir.join(format!("run_{timestamp}.log"));
 
     let file_config = ConfigBuilder::new()
         .set_target_level(LevelFilter::Off)
@@ -60,7 +60,7 @@ pub fn setup_logging() -> anyhow::Result<()> {
     .context("failed to initialize logger")?;
 
     log::info!("{RULE}");
-    log::info!("log session started at {}", timestamp);
+    log::info!("log session started at {timestamp}");
     log::info!("{RULE}\n");
 
     Ok(())
@@ -69,7 +69,7 @@ pub fn setup_logging() -> anyhow::Result<()> {
 fn cleanup_old_logs(logs_dir: &Path) -> anyhow::Result<()> {
     let mut log_files: Vec<_> = fs::read_dir(logs_dir)
         .context("failed to read logs directory")?
-        .filter_map(|r| r.ok())
+        .filter_map(Result::ok)
         .filter(|entry| entry.path().extension().is_some_and(|ext| ext == "log"))
         .collect();
 
@@ -79,14 +79,17 @@ fn cleanup_old_logs(logs_dir: &Path) -> anyhow::Result<()> {
         b_time.cmp(&a_time)
     });
 
-    let cutoff_date = Local::now() - Duration::days(MAX_LOG_AGE);
+    // A clock too close to the start of time to subtract from makes nothing too old.
+    let cutoff_date = Local::now().checked_sub_signed(MAX_LOG_AGE);
 
     // Newest first, so everything past KEPT_BEFORE_RUN is surplus.
     for (index, entry) in log_files.iter().enumerate() {
         let too_old = entry
             .metadata()
             .and_then(|metadata| metadata.modified())
-            .is_ok_and(|modified| DateTime::<Local>::from(modified) < cutoff_date);
+            .is_ok_and(|modified| {
+                cutoff_date.is_some_and(|cutoff| DateTime::<Local>::from(modified) < cutoff)
+            });
         if index >= KEPT_BEFORE_RUN || too_old {
             let _ = fs::remove_file(entry.path());
         }
@@ -102,7 +105,8 @@ mod tests {
 
     use super::*;
 
-    const DAY: StdDuration = StdDuration::from_secs(60 * 60 * 24);
+    /// A day longer than [`MAX_LOG_AGE`].
+    const TOO_OLD: StdDuration = StdDuration::from_hours(8 * 24);
 
     /// An empty directory unique to `name` and this process.
     fn scratch_dir(name: &str) -> PathBuf {
@@ -119,7 +123,7 @@ mod tests {
             .write(true)
             .open(path)
             .unwrap()
-            .set_modified(SystemTime::now() - age)
+            .set_modified(SystemTime::now().checked_sub(age).unwrap())
             .unwrap();
     }
 
@@ -128,9 +132,9 @@ mod tests {
         let dir = scratch_dir("age");
         write_aged(&dir.join("fresh.log"), StdDuration::ZERO);
         let old = dir.join("old.log");
-        write_aged(&old, DAY * (MAX_LOG_AGE as u32 + 1));
+        write_aged(&old, TOO_OLD);
         let other = dir.join("notes.txt");
-        write_aged(&other, DAY * (MAX_LOG_AGE as u32 + 1));
+        write_aged(&other, TOO_OLD);
 
         cleanup_old_logs(&dir).unwrap();
 
@@ -151,12 +155,12 @@ mod tests {
         for i in 0..MAX_LOG_COUNT {
             write_aged(
                 &dir.join(format!("fresh_{i}.log")),
-                StdDuration::from_secs(i as u64),
+                StdDuration::from_secs(u64::try_from(i).unwrap()),
             );
         }
         // Still fresh, but older than every other log.
         let oldest = dir.join("oldest.log");
-        write_aged(&oldest, StdDuration::from_secs(60 * 60));
+        write_aged(&oldest, StdDuration::from_hours(1));
 
         cleanup_old_logs(&dir).unwrap();
 

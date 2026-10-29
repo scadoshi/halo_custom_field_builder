@@ -49,7 +49,7 @@ impl FieldType {
         selection_options: Vec<String>,
     ) -> Result<Self, ParseFieldTypeError> {
         let selection_options: Vec<String> = selection_options
-            .iter()
+            .into_iter()
             .map(|option| option.trim().to_string())
             .collect();
         if selection_options.iter().any(String::is_empty) {
@@ -92,13 +92,13 @@ impl FieldType {
     pub fn input_type_id(&self) -> Option<u8> {
         match self {
             FieldType::Text { input_type } => Some(input_type.input_type_id()),
-            FieldType::Memo => None,
             FieldType::SingleSelect { input_type, .. } => Some(input_type.input_type_id()),
-            FieldType::MultiSelect { .. } => None,
             FieldType::Date { input_type } => Some(input_type.input_type_id()),
-            FieldType::Time => None,
-            FieldType::Checkbox => None,
-            FieldType::Rich => None,
+            FieldType::Memo
+            | FieldType::MultiSelect { .. }
+            | FieldType::Time
+            | FieldType::Checkbox
+            | FieldType::Rich => None,
         }
     }
 

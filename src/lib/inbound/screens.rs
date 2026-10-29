@@ -56,57 +56,6 @@ impl Menu {
         Ok(())
     }
 
-    pub fn prompt_run_mode(&self) -> anyhow::Result<RunMode> {
-        self.run_mode_from(&mut io::stdin().lock())
-    }
-
-    fn run_mode_from(&self, input: &mut impl BufRead) -> anyhow::Result<RunMode> {
-        loop {
-            println!("{}", "\navailable operations:".bright_blue().bold());
-            println!("{}", RULE.bright_blue());
-
-            println!(
-                "{}. {}",
-                "1".bright_yellow().bold(),
-                "import all fields".bright_green()
-            );
-
-            println!(
-                "{}. {}",
-                "2".bright_yellow().bold(),
-                "debug mode (field by field)".bright_cyan()
-            );
-
-            println!(
-                "{}. {}",
-                "3".bright_yellow().bold(),
-                "quit program".bright_red()
-            );
-
-            print!("\n{}", "enter your choice (1-3): ".bright_white().bold());
-            io::stdout().flush()?;
-
-            let Some(choice) = read_choice(input)? else {
-                return Ok(RunMode::Quit);
-            };
-            match choice.as_str() {
-                "1" => {
-                    println!("\n{}", "selected: import all fields".bright_green());
-                    return Ok(RunMode::Import);
-                }
-                "2" => {
-                    println!("\n{}", "selected: debug mode".bright_cyan());
-                    return Ok(RunMode::Debug);
-                }
-                "3" => {
-                    println!("\n{}", "selected: quit program".bright_red());
-                    return Ok(RunMode::Quit);
-                }
-                _ => error!("{}", "invalid selection. please try again.".bright_red()),
-            }
-        }
-    }
-
     pub async fn process_all_fields(
         &self,
         field_client: &mut FieldClient,
@@ -115,13 +64,13 @@ impl Menu {
 
         for field in &self.fields {
             match field_client.create_field(field).await {
-                Ok(_) => {
+                Ok(()) => {
                     results.add_success(field.label.to_string());
                     info!("✓ field processed successfully: {}", field.label);
                 }
                 Err(e) => {
                     results.add_failure(field.label.to_string(), e.to_string());
-                    error!("✗ field processing failed: {}", e);
+                    error!("✗ field processing failed: {e}");
                 }
             }
         }
@@ -144,19 +93,18 @@ impl Menu {
                     info!("processing field: {}", field.label);
 
                     match field_client.create_field(field).await {
-                        Ok(_) => {
+                        Ok(()) => {
                             results.add_success(field.label.to_string());
                             info!("✓ field processed successfully\n");
                         }
                         Err(e) => {
                             results.add_failure(field.label.to_string(), e.to_string());
-                            error!("✗ field processing failed: {}\n", e);
+                            error!("✗ field processing failed: {e}\n");
                         }
                     }
                 }
                 DebugAction::Skip => {
                     info!("skipping field: {}\n", field.label);
-                    continue;
                 }
                 DebugAction::Quit => {
                     info!("debug mode terminated by user");
@@ -188,7 +136,7 @@ impl Menu {
                 "{}",
                 format!(
                     "field {} of {}",
-                    (index + 1).to_string().bright_yellow(),
+                    index.saturating_add(1).to_string().bright_yellow(),
                     self.fields.len().to_string().bright_yellow()
                 )
                 .bright_blue()
@@ -248,6 +196,57 @@ impl Menu {
     }
 }
 
+pub fn prompt_run_mode() -> anyhow::Result<RunMode> {
+    run_mode_from(&mut io::stdin().lock())
+}
+
+fn run_mode_from(input: &mut impl BufRead) -> anyhow::Result<RunMode> {
+    loop {
+        println!("{}", "\navailable operations:".bright_blue().bold());
+        println!("{}", RULE.bright_blue());
+
+        println!(
+            "{}. {}",
+            "1".bright_yellow().bold(),
+            "import all fields".bright_green()
+        );
+
+        println!(
+            "{}. {}",
+            "2".bright_yellow().bold(),
+            "debug mode (field by field)".bright_cyan()
+        );
+
+        println!(
+            "{}. {}",
+            "3".bright_yellow().bold(),
+            "quit program".bright_red()
+        );
+
+        print!("\n{}", "enter your choice (1-3): ".bright_white().bold());
+        io::stdout().flush()?;
+
+        let Some(choice) = read_choice(input)? else {
+            return Ok(RunMode::Quit);
+        };
+        match choice.as_str() {
+            "1" => {
+                println!("\n{}", "selected: import all fields".bright_green());
+                return Ok(RunMode::Import);
+            }
+            "2" => {
+                println!("\n{}", "selected: debug mode".bright_cyan());
+                return Ok(RunMode::Debug);
+            }
+            "3" => {
+                println!("\n{}", "selected: quit program".bright_red());
+                return Ok(RunMode::Quit);
+            }
+            _ => error!("{}", "invalid selection. please try again.".bright_red()),
+        }
+    }
+}
+
 /// Reads one line from `input`, trimmed. `None` at end of input.
 fn read_choice(input: &mut impl BufRead) -> io::Result<Option<String>> {
     let mut line = String::new();
@@ -270,7 +269,7 @@ mod tests {
     }
 
     fn run_mode(input: &str) -> RunMode {
-        menu().run_mode_from(&mut input.as_bytes()).unwrap()
+        run_mode_from(&mut input.as_bytes()).unwrap()
     }
 
     fn debug_action(input: &str) -> DebugAction {

@@ -35,7 +35,7 @@ impl CustomField {
         let name = Name::new(name)?;
         let label = Label::new(label)?;
         let selection_options = match selection_options {
-            Some(options) => options.split(",").map(String::from).collect(),
+            Some(options) => options.split(',').map(String::from).collect(),
             None => vec![],
         };
         let field_type = FieldType::new(field_type_id, input_type_id, selection_options)?;

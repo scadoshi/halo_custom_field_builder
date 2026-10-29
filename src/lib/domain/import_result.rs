@@ -35,7 +35,9 @@ impl ImportResults {
 
         println!(
             "• Total fields processed: {}",
-            (self.successful.len() + self.failed.len())
+            self.successful
+                .len()
+                .saturating_add(self.failed.len())
                 .to_string()
                 .bright_yellow()
         );

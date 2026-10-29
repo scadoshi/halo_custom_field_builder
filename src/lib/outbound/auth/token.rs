@@ -39,7 +39,10 @@ impl AuthToken {
     }
 
     pub fn is_expired(&self) -> bool {
-        Utc::now() + EXPIRY_MARGIN >= self.expires_at
+        // A clock too close to the end of time to add the margin to counts as expired.
+        Utc::now()
+            .checked_add_signed(EXPIRY_MARGIN)
+            .is_none_or(|soon| soon >= self.expires_at)
     }
 
     pub fn header_value(&self) -> String {

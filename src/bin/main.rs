@@ -3,8 +3,8 @@ use std::process::ExitCode;
 
 use halo_custom_field_builder::config::Config;
 use halo_custom_field_builder::domain::logging;
-use halo_custom_field_builder::inbound::readers;
 use halo_custom_field_builder::inbound::screens::{Menu, RULE, RunMode};
+use halo_custom_field_builder::inbound::{readers, screens};
 use halo_custom_field_builder::outbound::auth::client::AuthClient;
 use halo_custom_field_builder::outbound::field_client::FieldClient;
 use log::{error, info};
@@ -20,7 +20,7 @@ async fn run() -> anyhow::Result<()> {
     let mut auth_client = AuthClient::new(&config);
 
     let token = auth_client.fetch_token().await.map_err(|e| {
-        error!("✗ authentication failed: {}", e);
+        error!("✗ authentication failed: {e}");
         e
     })?;
 
@@ -36,7 +36,7 @@ async fn run() -> anyhow::Result<()> {
 
     let mut field_client = FieldClient::new(&config, auth_client);
 
-    match menu.prompt_run_mode()? {
+    match screens::prompt_run_mode()? {
         RunMode::Import => {
             info!("\n{RULE}");
             info!("starting full import mode");

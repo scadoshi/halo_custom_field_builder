@@ -63,12 +63,12 @@ pub fn read_fields(path: &Path) -> anyhow::Result<Vec<CustomField>> {
             Err(e) => e.position(),
         }
         .map_or(fallback, Position::line);
-        let row_data = result.context(format!("row {}: failed to read entry", row_index))?;
+        let row_data = result.with_context(|| format!("row {row_index}: failed to read entry"))?;
         let cell = |index| column(&row_data, index).with_context(|| format!("row {row_index}"));
 
         let field_type_id: u8 = cell(positions.field_type_id)?
             .parse()
-            .context(format!("row {}: invalid field_type_id value", row_index))?;
+            .with_context(|| format!("row {row_index}: invalid field_type_id value"))?;
 
         let input_type_id = cell(positions.input_type_id)?;
         let input_type_id: Option<u8> = if input_type_id.trim().is_empty() {
@@ -77,7 +77,7 @@ pub fn read_fields(path: &Path) -> anyhow::Result<Vec<CustomField>> {
             Some(
                 input_type_id
                     .parse()
-                    .context(format!("row {}: invalid input_type_id value", row_index))?,
+                    .with_context(|| format!("row {row_index}: invalid input_type_id value"))?,
             )
         };
 
@@ -95,7 +95,7 @@ pub fn read_fields(path: &Path) -> anyhow::Result<Vec<CustomField>> {
             input_type_id,
             selection_options,
         )
-        .context(format!("row {}: failed to create custom field", row_index))?;
+        .with_context(|| format!("row {row_index}: failed to create custom field"))?;
 
         fields.push(field);
     }
