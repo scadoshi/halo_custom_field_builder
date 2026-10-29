@@ -3,7 +3,7 @@ use std::time::Duration;
 use anyhow::Context;
 use log::debug;
 use reqwest::Client as ReqwestClient;
-use tokio::time::sleep;
+use tokio::time;
 
 use crate::config::Config;
 use crate::domain::models::custom_field::CustomField;
@@ -32,7 +32,7 @@ impl FieldClient {
     }
 
     pub async fn create_field(&mut self, custom_field: &CustomField) -> anyhow::Result<()> {
-        sleep(REQUEST_DELAY).await;
+        time::sleep(REQUEST_DELAY).await;
 
         let http_custom_field = HttpCustomField::from(custom_field);
         // halo api requires an array of custom field update objects
