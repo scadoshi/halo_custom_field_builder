@@ -48,6 +48,10 @@ impl Menu {
     }
 
     /// Prints the token type and the number of fields loaded.
+    #[expect(
+        clippy::print_stdout,
+        reason = "the menus and summaries are the program's own terminal output"
+    )]
     pub fn show_initial_stats(&self, token_type: &str) {
         println!("\n{}", "initial status:".bright_blue().bold());
         println!("{}", RULE.bright_blue());
@@ -141,6 +145,10 @@ impl Menu {
         self.debug_action_from(index, field, &mut io::stdin().lock())
     }
 
+    #[expect(
+        clippy::print_stdout,
+        reason = "the menus and summaries are the program's own terminal output"
+    )]
     fn debug_action_from(
         &self,
         index: usize,
@@ -223,6 +231,10 @@ pub fn prompt_run_mode() -> anyhow::Result<RunMode> {
     run_mode_from(&mut io::stdin().lock())
 }
 
+#[expect(
+    clippy::print_stdout,
+    reason = "the menus and summaries are the program's own terminal output"
+)]
 fn run_mode_from(input: &mut impl BufRead) -> anyhow::Result<RunMode> {
     loop {
         println!("{}", "\navailable operations:".bright_blue().bold());

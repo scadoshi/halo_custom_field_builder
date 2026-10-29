@@ -7,6 +7,7 @@ use crate::domain::models::custom_field::CustomField;
 /// A field as Halo's `fieldinfo` endpoint takes it. Every field is created
 /// searchable and copied to child tickets.
 #[derive(Debug, Serialize)]
+#[expect(clippy::struct_excessive_bools, reason = "Halo's wire format")]
 pub struct HttpCustomField {
     usage: u8,
     name: String,

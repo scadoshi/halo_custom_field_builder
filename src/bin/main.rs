@@ -64,6 +64,10 @@ async fn run() -> anyhow::Result<()> {
 }
 
 #[tokio::main]
+#[expect(
+    clippy::print_stderr,
+    reason = "with no logger, stderr is the only place the error can go"
+)]
 async fn main() -> ExitCode {
     // Without a logger, error! prints nothing, so this failure goes straight to stderr.
     if let Err(e) = logging::setup_logging() {

@@ -1,4 +1,8 @@
 //! Runs the built program in a scratch directory and checks how it reports a failure.
+#![expect(
+    clippy::unwrap_used,
+    reason = "a test: its helpers panic when setup fails"
+)]
 
 use std::path::PathBuf;
 use std::process::{Command, Output};

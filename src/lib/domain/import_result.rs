@@ -39,6 +39,10 @@ impl ImportResults {
     }
 
     /// Prints the totals, then each failed field with its reason.
+    #[expect(
+        clippy::print_stdout,
+        reason = "the menus and summaries are the program's own terminal output"
+    )]
     pub fn log_summary(&self) {
         println!("\n{}", "Import Summary:".bright_blue().bold());
         println!("{}", RULE.bright_blue());
