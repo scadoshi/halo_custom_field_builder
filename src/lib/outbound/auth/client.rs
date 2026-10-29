@@ -77,7 +77,6 @@ impl AuthClient {
         let response = self
             .http_client
             .post(self.token_url.as_str())
-            .header("Content-Type", "application/x-www-form-urlencoded")
             .form(&token_request)
             .send()
             .await

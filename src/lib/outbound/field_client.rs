@@ -47,7 +47,6 @@ impl FieldClient {
             .http_client
             .post(&self.endpoint)
             .header("Authorization", auth_header)
-            .header("Content-Type", "application/json")
             .json(&wrapped_http_custom_field)
             .send()
             .await
@@ -92,6 +91,31 @@ mod tests {
 
     fn field() -> CustomField {
         CustomField::new("notes", "notes", 1, None, None).unwrap()
+    }
+
+    #[tokio::test]
+    async fn each_request_names_its_content_type_once() {
+        let server = TestServer::start(vec![test_server::TOKEN, CREATED]).await;
+        let config = server.config();
+        let mut client = FieldClient::new(&config, AuthClient::new(&config));
+
+        client.create_field(&field()).await.unwrap();
+
+        let requests = server.requests();
+        let content_types = |request: &test_server::Request| {
+            request
+                .headers
+                .iter()
+                .filter(|line| line.to_ascii_lowercase().starts_with("content-type:"))
+                .count()
+        };
+        assert_eq!(
+            requests[0].header("content-type"),
+            Some("application/x-www-form-urlencoded")
+        );
+        assert_eq!(requests[1].header("content-type"), Some("application/json"));
+        assert_eq!(content_types(&requests[0]), 1);
+        assert_eq!(content_types(&requests[1]), 1);
     }
 
     #[tokio::test]
