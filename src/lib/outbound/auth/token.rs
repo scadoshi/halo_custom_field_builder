@@ -1,9 +1,13 @@
 use std::fmt;
 
 use anyhow::Context;
-use chrono::{DateTime, Duration, TimeDelta, Utc};
+use chrono::{DateTime, TimeDelta, Utc};
 
 use crate::config::REDACTED;
+
+/// How long before its stated expiry a token counts as expired, so it never
+/// runs out mid-request.
+const EXPIRY_MARGIN: TimeDelta = TimeDelta::seconds(30);
 
 pub struct AuthToken {
     access_token: String,
@@ -35,8 +39,7 @@ impl AuthToken {
     }
 
     pub fn is_expired(&self) -> bool {
-        // Add a small buffer (30 seconds) to prevent edge cases
-        Utc::now() + Duration::seconds(30) >= self.expires_at
+        Utc::now() + EXPIRY_MARGIN >= self.expires_at
     }
 
     pub fn header_value(&self) -> String {

@@ -7,6 +7,10 @@ use crate::domain::import_result::ImportResults;
 use crate::domain::models::custom_field::CustomField;
 use crate::outbound::field_client::FieldClient;
 
+/// The line drawn above and below each block of output, 80 columns wide.
+pub const RULE: &str =
+    "================================================================================";
+
 #[derive(Debug)]
 pub enum RunMode {
     Import,
@@ -33,7 +37,7 @@ impl Menu {
 
     pub fn show_initial_stats(&self, token_type: &str) -> anyhow::Result<()> {
         println!("\n{}", "initial status:".bright_blue().bold());
-        println!("{}", "=".repeat(80).bright_blue());
+        println!("{}", RULE.bright_blue());
 
         println!(
             "• authentication: {} (token type: {})",
@@ -48,7 +52,7 @@ impl Menu {
 
         println!("• status: {}", "ready to process".bright_green().bold());
 
-        println!("{}\n", "=".repeat(80).bright_blue());
+        println!("{}\n", RULE.bright_blue());
         Ok(())
     }
 
@@ -59,7 +63,7 @@ impl Menu {
     fn run_mode_from(&self, input: &mut impl BufRead) -> anyhow::Result<RunMode> {
         loop {
             println!("{}", "\navailable operations:".bright_blue().bold());
-            println!("{}", "=".repeat(80).bright_blue());
+            println!("{}", RULE.bright_blue());
 
             println!(
                 "{}. {}",
@@ -179,7 +183,7 @@ impl Menu {
         input: &mut impl BufRead,
     ) -> anyhow::Result<DebugAction> {
         loop {
-            println!("\n{}", "=".repeat(80).bright_blue());
+            println!("\n{}", RULE.bright_blue());
             println!(
                 "{}",
                 format!(
@@ -190,7 +194,7 @@ impl Menu {
                 .bright_blue()
                 .bold()
             );
-            println!("{}", "=".repeat(80).bright_blue());
+            println!("{}", RULE.bright_blue());
 
             println!("\n{}", "field details:".bright_blue().bold());
             println!("• label: {}", field.label.to_string().bright_yellow());

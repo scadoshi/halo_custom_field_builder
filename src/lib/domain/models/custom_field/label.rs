@@ -2,11 +2,14 @@ use std::fmt::Display;
 
 use thiserror::Error;
 
+/// The most characters Halo takes in a label.
+const MAX_LEN: usize = 256;
+
 #[derive(Debug, Error)]
 pub enum ParseLabelError {
     #[error("cannot be empty")]
     Empty,
-    #[error("cannot be longer than 256 characters")]
+    #[error("cannot be longer than {} characters", MAX_LEN)]
     TooLong,
 }
 
@@ -18,7 +21,7 @@ impl Label {
         let trimmed = label.trim();
         if trimmed.is_empty() {
             Err(ParseLabelError::Empty)
-        } else if trimmed.chars().count() > 256 {
+        } else if trimmed.chars().count() > MAX_LEN {
             Err(ParseLabelError::TooLong)
         } else {
             Ok(Self(trimmed.to_string()))

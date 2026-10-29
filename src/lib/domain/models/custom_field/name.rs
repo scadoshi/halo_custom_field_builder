@@ -2,11 +2,14 @@ use std::fmt::Display;
 
 use thiserror::Error;
 
+/// The most characters Halo takes in a field name.
+const MAX_LEN: usize = 64;
+
 #[derive(Debug, Error)]
 pub enum ParseNameError {
     #[error("cannot be empty")]
     Empty,
-    #[error("cannot be longer than 64 characters")]
+    #[error("cannot be longer than {} characters", MAX_LEN)]
     TooLong,
     #[error("can only hold ASCII letters, digits and underscores")]
     InvalidCharacters,
@@ -20,7 +23,7 @@ impl Name {
         let trimmed = name.trim();
         if trimmed.is_empty() {
             Err(ParseNameError::Empty)
-        } else if trimmed.chars().count() > 64 {
+        } else if trimmed.chars().count() > MAX_LEN {
             Err(ParseNameError::TooLong)
         } else if !trimmed
             .chars()

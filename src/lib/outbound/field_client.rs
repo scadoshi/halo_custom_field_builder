@@ -10,6 +10,10 @@ use crate::domain::models::custom_field::CustomField;
 use crate::outbound::auth::client::AuthClient;
 use crate::outbound::http_custom_field::HttpCustomField;
 
+/// The wait before each field request. Halo allows 700 requests per five
+/// minutes; this caps the program at 120 a minute.
+const REQUEST_DELAY: Duration = Duration::from_millis(500);
+
 #[derive(Debug)]
 pub struct FieldClient {
     /// Halo's field creation endpoint.
@@ -28,9 +32,7 @@ impl FieldClient {
     }
 
     pub async fn create_field(&mut self, custom_field: &CustomField) -> anyhow::Result<()> {
-        // rate limiting: 500ms delay between requests
-        // max 120 requests/minute, staying under the 700/5min limit
-        sleep(Duration::from_millis(500)).await;
+        sleep(REQUEST_DELAY).await;
 
         let http_custom_field = HttpCustomField::from(custom_field);
         // halo api requires an array of custom field update objects

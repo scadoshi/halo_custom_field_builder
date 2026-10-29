@@ -4,7 +4,7 @@ use std::process::ExitCode;
 use halo_custom_field_builder::config::Config;
 use halo_custom_field_builder::domain::logging;
 use halo_custom_field_builder::inbound::readers;
-use halo_custom_field_builder::inbound::screens::{Menu, RunMode};
+use halo_custom_field_builder::inbound::screens::{Menu, RULE, RunMode};
 use halo_custom_field_builder::outbound::auth::client::AuthClient;
 use halo_custom_field_builder::outbound::field_client::FieldClient;
 use log::{error, info};
@@ -38,17 +38,17 @@ async fn run() -> anyhow::Result<()> {
 
     match menu.prompt_run_mode()? {
         RunMode::Import => {
-            info!("\n{}", "=".repeat(80));
+            info!("\n{RULE}");
             info!("starting full import mode");
-            info!("{}\n", "=".repeat(80));
+            info!("{RULE}\n");
 
             let results = menu.process_all_fields(&mut field_client).await?;
             results.log_summary();
         }
         RunMode::Debug => {
-            info!("\n{}", "=".repeat(80));
+            info!("\n{RULE}");
             info!("starting debug mode");
-            info!("{}\n", "=".repeat(80));
+            info!("{RULE}\n");
 
             let results = menu.debug_mode(&mut field_client).await?;
             results.log_summary();

@@ -1,5 +1,7 @@
 use colored::Colorize;
 
+use crate::inbound::screens::RULE;
+
 /// A field Halo refused, with the reason.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Failure {
@@ -29,7 +31,7 @@ impl ImportResults {
 
     pub fn log_summary(&self) {
         println!("\n{}", "Import Summary:".bright_blue().bold());
-        println!("{}", "=".repeat(80).bright_blue());
+        println!("{}", RULE.bright_blue());
 
         println!(
             "• Total fields processed: {}",
@@ -57,6 +59,6 @@ impl ImportResults {
             }
         }
 
-        println!("{}", "=".repeat(80).bright_blue());
+        println!("{}", RULE.bright_blue());
     }
 }

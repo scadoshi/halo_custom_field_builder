@@ -9,6 +9,8 @@ use simplelog::{
     ColorChoice, CombinedLogger, ConfigBuilder, TermLogger, TerminalMode, WriteLogger,
 };
 
+use crate::inbound::screens::RULE;
+
 const MAX_LOG_AGE: i64 = 7;
 const MAX_LOG_COUNT: usize = 100;
 /// Logs cleanup keeps, leaving room for the one the run creates next.
@@ -57,9 +59,9 @@ pub fn setup_logging() -> anyhow::Result<()> {
     ])
     .context("failed to initialize logger")?;
 
-    log::info!("{}", "=".repeat(80));
+    log::info!("{RULE}");
     log::info!("log session started at {}", timestamp);
-    log::info!("{}\n", "=".repeat(80));
+    log::info!("{RULE}\n");
 
     Ok(())
 }
