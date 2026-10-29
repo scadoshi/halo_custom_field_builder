@@ -32,7 +32,7 @@ async fn run() -> anyhow::Result<()> {
     info!("✓ successfully validated {} fields\n", fields.len());
 
     let menu = Menu::new(fields);
-    menu.show_initial_stats(token.split_whitespace().next().unwrap_or("unknown"))?;
+    menu.show_initial_stats(token.split_whitespace().next().unwrap_or("unknown"));
 
     let mut field_client = FieldClient::new(&config, auth_client);
 
@@ -42,7 +42,7 @@ async fn run() -> anyhow::Result<()> {
             info!("starting full import mode");
             info!("{RULE}\n");
 
-            let results = menu.process_all_fields(&mut field_client).await?;
+            let results = menu.process_all_fields(&mut field_client).await;
             results.log_summary();
         }
         RunMode::Debug => {

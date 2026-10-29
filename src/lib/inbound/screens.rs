@@ -35,7 +35,7 @@ impl Menu {
         Self { fields }
     }
 
-    pub fn show_initial_stats(&self, token_type: &str) -> anyhow::Result<()> {
+    pub fn show_initial_stats(&self, token_type: &str) {
         println!("\n{}", "initial status:".bright_blue().bold());
         println!("{}", RULE.bright_blue());
 
@@ -53,13 +53,9 @@ impl Menu {
         println!("• status: {}", "ready to process".bright_green().bold());
 
         println!("{}\n", RULE.bright_blue());
-        Ok(())
     }
 
-    pub async fn process_all_fields(
-        &self,
-        field_client: &mut FieldClient,
-    ) -> anyhow::Result<ImportResults> {
+    pub async fn process_all_fields(&self, field_client: &mut FieldClient) -> ImportResults {
         let mut results = ImportResults::new();
 
         for field in &self.fields {
@@ -75,7 +71,7 @@ impl Menu {
             }
         }
 
-        Ok(results)
+        results
     }
 
     pub async fn debug_mode(
