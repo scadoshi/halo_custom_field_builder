@@ -2,15 +2,12 @@ use std::fmt;
 
 use anyhow::Context;
 use chrono::{DateTime, Duration, TimeDelta, Utc};
-use serde::{Deserialize, Serialize};
 
 use crate::config::REDACTED;
 
-#[derive(Serialize, Deserialize)]
 pub struct AuthToken {
     access_token: String,
     token_type: String,
-    #[serde(with = "chrono::serde::ts_seconds")]
     expires_at: DateTime<Utc>,
 }
 

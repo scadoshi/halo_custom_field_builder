@@ -1,6 +1,5 @@
 use std::fmt::Display;
 
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -11,7 +10,7 @@ pub enum ParseLabelError {
     TooLong,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Label(String);
 
 impl Label {

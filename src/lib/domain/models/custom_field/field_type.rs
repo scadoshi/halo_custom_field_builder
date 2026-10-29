@@ -1,5 +1,4 @@
 pub mod input_types;
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::domain::models::custom_field::field_type::input_types::date_input_type::DateInputType;
@@ -23,7 +22,7 @@ pub enum ParseFieldTypeError {
     SelectionWithoutOptions(u8),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum FieldType {
     Text {
         input_type: TextInputType,

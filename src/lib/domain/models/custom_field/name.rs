@@ -1,6 +1,5 @@
 use std::fmt::Display;
 
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -13,7 +12,7 @@ pub enum ParseNameError {
     InvalidCharacters,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Name(String);
 
 impl Name {
