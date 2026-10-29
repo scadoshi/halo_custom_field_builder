@@ -1,3 +1,5 @@
+//! Requests tokens and caches the current one.
+
 use std::fmt;
 
 use anyhow::Context;
@@ -22,6 +24,8 @@ struct TokenRequest<'config> {
     grant_type: &'static str,
 }
 
+/// Gets tokens with the client credentials grant and reuses one until it
+/// nears expiry. Debug output hides the client secret.
 pub struct AuthClient {
     token_url: Url,
     client_id: String,
@@ -43,6 +47,7 @@ impl fmt::Debug for AuthClient {
 }
 
 impl AuthClient {
+    /// A client for the token URL and credentials in `config`, with no token yet.
     pub fn new(config: &Config) -> Self {
         Self {
             token_url: config.token_url.clone(),
@@ -53,6 +58,14 @@ impl AuthClient {
         }
     }
 
+    /// The `Authorization` header value, from the cached token or, when that
+    /// is missing or within 30 seconds of expiry, a new one.
+    ///
+    /// # Errors
+    ///
+    /// Fails when the token request can't be sent, Halo answers with an error
+    /// status (the message holds the status and body), or the response is
+    /// not a token.
     pub async fn fetch_token(&mut self) -> anyhow::Result<String> {
         if let Some(token) = &self.current_token
             && !token.is_expired()

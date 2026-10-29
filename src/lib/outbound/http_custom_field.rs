@@ -1,7 +1,11 @@
+//! The JSON body Halo takes for a new field.
+
 use serde::Serialize;
 
 use crate::domain::models::custom_field::CustomField;
 
+/// A field as Halo's `fieldinfo` endpoint takes it. Every field is created
+/// searchable and copied to child tickets.
 #[derive(Debug, Serialize)]
 pub struct HttpCustomField {
     usage: u8,

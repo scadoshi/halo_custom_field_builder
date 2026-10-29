@@ -1,3 +1,5 @@
+//! Reads custom fields from the CSV file.
+
 use std::fs::File;
 use std::path::Path;
 
@@ -48,6 +50,13 @@ fn column_positions(headers: &StringRecord) -> anyhow::Result<FieldPositions> {
     })
 }
 
+/// Reads every row of the CSV at `path` into a field. Columns are found by
+/// header, so their order doesn't matter.
+///
+/// # Errors
+///
+/// Fails when the file can't be opened, a column is missing, or a row is
+/// invalid. A row's error starts with the line it begins on in the file.
 pub fn read_fields(path: &Path) -> anyhow::Result<Vec<CustomField>> {
     let mut fields = Vec::new();
     let mut reader = open_csv(path)?;

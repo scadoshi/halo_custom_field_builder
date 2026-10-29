@@ -1,3 +1,5 @@
+//! Reads a CSV of custom field definitions and creates each field in Halo.
+
 use std::path::Path;
 use std::process::ExitCode;
 

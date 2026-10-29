@@ -1,3 +1,5 @@
+//! An access token and when it expires.
+
 use std::fmt;
 
 use anyhow::Context;
@@ -9,6 +11,7 @@ use crate::config::REDACTED;
 /// runs out mid-request.
 const EXPIRY_MARGIN: TimeDelta = TimeDelta::seconds(30);
 
+/// An access token and when it expires. Debug output hides the token.
 pub struct AuthToken {
     access_token: String,
     token_type: String,
@@ -27,6 +30,10 @@ impl fmt::Debug for AuthToken {
 
 impl AuthToken {
     /// A token that expires `expires_in` seconds from now.
+    ///
+    /// # Errors
+    ///
+    /// Fails when `expires_in` puts the expiry out of the clock's range.
     pub fn new(access_token: String, token_type: String, expires_in: i64) -> anyhow::Result<Self> {
         let expires_at = TimeDelta::try_seconds(expires_in)
             .and_then(|lifetime| Utc::now().checked_add_signed(lifetime))
@@ -38,6 +45,7 @@ impl AuthToken {
         })
     }
 
+    /// Whether the token expires within the next 30 seconds or already has.
     pub fn is_expired(&self) -> bool {
         // A clock too close to the end of time to add the margin to counts as expired.
         Utc::now()
@@ -45,6 +53,7 @@ impl AuthToken {
             .is_none_or(|soon| soon >= self.expires_at)
     }
 
+    /// The `Authorization` header value: the token type, a space, the token.
     pub fn header_value(&self) -> String {
         format!("{} {}", self.token_type, self.access_token)
     }

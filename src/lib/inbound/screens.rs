@@ -1,3 +1,5 @@
+//! The terminal menus and status output.
+
 use std::io::{self, BufRead, Write};
 
 use colored::Colorize;
@@ -11,30 +13,41 @@ use crate::outbound::field_client::FieldClient;
 pub const RULE: &str =
     "================================================================================";
 
+/// The choice on the first menu.
 #[derive(Debug)]
 pub enum RunMode {
+    /// Create every field.
     Import,
+    /// Show each field and ask before creating it.
     Debug,
+    /// Stop without creating anything.
     Quit,
 }
 
+/// The choice for one field in debug mode.
 #[derive(Debug)]
 pub enum DebugAction {
+    /// Create the field.
     Process,
+    /// Go on to the next field.
     Skip,
+    /// Stop debug mode.
     Quit,
 }
 
+/// The fields read from the CSV and the screens that act on them.
 #[derive(Debug)]
 pub struct Menu {
     fields: Vec<CustomField>,
 }
 
 impl Menu {
+    /// A menu over these fields.
     pub fn new(fields: Vec<CustomField>) -> Self {
         Self { fields }
     }
 
+    /// Prints the token type and the number of fields loaded.
     pub fn show_initial_stats(&self, token_type: &str) {
         println!("\n{}", "initial status:".bright_blue().bold());
         println!("{}", RULE.bright_blue());
@@ -55,6 +68,8 @@ impl Menu {
         println!("{}\n", RULE.bright_blue());
     }
 
+    /// Creates every field in order. A failure is logged and recorded, and
+    /// the run goes on.
     pub async fn process_all_fields(&self, field_client: &mut FieldClient) -> ImportResults {
         let mut results = ImportResults::new();
 
@@ -74,6 +89,12 @@ impl Menu {
         results
     }
 
+    /// Shows each field and asks whether to create it, skip it or stop.
+    ///
+    /// # Errors
+    ///
+    /// Fails when the terminal can't be read or written. End of input stops
+    /// debug mode without an error.
     pub async fn debug_mode(
         &self,
         field_client: &mut FieldClient,
@@ -192,6 +213,12 @@ impl Menu {
     }
 }
 
+/// Asks on the terminal which run mode to use until it gets a valid choice.
+///
+/// # Errors
+///
+/// Fails when the terminal can't be read or written. End of input means
+/// [`RunMode::Quit`].
 pub fn prompt_run_mode() -> anyhow::Result<RunMode> {
     run_mode_from(&mut io::stdin().lock())
 }

@@ -1,3 +1,5 @@
+//! What a run created and what it failed on.
+
 use colored::Colorize;
 
 use crate::inbound::screens::RULE;
@@ -5,30 +7,38 @@ use crate::inbound::screens::RULE;
 /// A field Halo refused, with the reason.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Failure {
+    /// The field's label.
     pub label: String,
+    /// Why the field was not created.
     pub error: String,
 }
 
 /// The labels of the fields a run created and the fields it failed on.
 #[derive(Debug, Default)]
 pub struct ImportResults {
+    /// Labels of the fields created, in the order they were sent.
     pub successful: Vec<String>,
+    /// The fields Halo refused, in the order they were sent.
     pub failed: Vec<Failure>,
 }
 
 impl ImportResults {
+    /// Results with nothing in them yet.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Records a created field.
     pub fn add_success(&mut self, label: String) {
         self.successful.push(label);
     }
 
+    /// Records a refused field and the reason.
     pub fn add_failure(&mut self, label: String, error: String) {
         self.failed.push(Failure { label, error });
     }
 
+    /// Prints the totals, then each failed field with its reason.
     pub fn log_summary(&self) {
         println!("\n{}", "Import Summary:".bright_blue().bold());
         println!("{}", RULE.bright_blue());

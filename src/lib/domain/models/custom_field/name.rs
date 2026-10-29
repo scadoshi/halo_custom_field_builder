@@ -1,3 +1,5 @@
+//! The field's internal name.
+
 use std::fmt::Display;
 
 use thiserror::Error;
@@ -5,20 +7,31 @@ use thiserror::Error;
 /// The most characters Halo takes in a field name.
 const MAX_LEN: usize = 64;
 
+/// Why a name is invalid.
 #[derive(Debug, Error)]
 pub enum ParseNameError {
+    /// Nothing is left once trimmed.
     #[error("cannot be empty")]
     Empty,
+    /// Too many characters once trimmed.
     #[error("cannot be longer than {} characters", MAX_LEN)]
     TooLong,
+    /// A character other than an ASCII letter, digit or underscore.
     #[error("can only hold ASCII letters, digits and underscores")]
     InvalidCharacters,
 }
 
+/// A trimmed name of 1 to 64 ASCII letters, digits and underscores.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Name(String);
 
 impl Name {
+    /// The name, trimmed.
+    ///
+    /// # Errors
+    ///
+    /// Fails when the trimmed name is empty, longer than 64 characters, or
+    /// holds anything but ASCII letters, digits and underscores.
     pub fn new(name: &str) -> Result<Self, ParseNameError> {
         let trimmed = name.trim();
         if trimmed.is_empty() {

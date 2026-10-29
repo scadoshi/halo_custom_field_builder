@@ -1,15 +1,24 @@
+//! Settings read from `.env` and the environment.
+
 use std::fmt;
 
 use anyhow::Context;
 use url::Url;
 
+/// Connection settings and the CSV path. Debug output hides the client secret.
 #[derive(Clone)]
 pub struct Config {
+    /// The Halo instance, always https.
     pub base_url: Url,
+    /// `auth/token` under the base URL.
     pub token_url: Url,
+    /// `api` under the base URL.
     pub api_url: Url,
+    /// The API application's client ID.
     pub client_id: String,
+    /// The API application's client secret.
     pub client_secret: String,
+    /// The CSV to read, relative to the working directory.
     pub source_file_name: String,
 }
 
@@ -39,6 +48,11 @@ const API_URL_PATH: &str = "api";
 
 impl Config {
     /// Reads `.env` from the working directory, then the process environment.
+    ///
+    /// # Errors
+    ///
+    /// Fails when `.env` can't be loaded or a setting is missing or invalid,
+    /// as [`Config::from_lookup`] describes.
     pub fn load_from_env() -> anyhow::Result<Self> {
         dotenvy::dotenv().context("failed to load environment")?;
         Self::from_lookup(|key| std::env::var(key).ok())
@@ -46,6 +60,11 @@ impl Config {
 
     /// Builds the config from `lookup`, which answers `None` for an unset key.
     /// The base URL must be https: the client secret travels on every request.
+    ///
+    /// # Errors
+    ///
+    /// Fails when a variable is unset, naming it, or when `BASE_URL` is not an
+    /// https URL.
     pub fn from_lookup(lookup: impl Fn(&str) -> Option<String>) -> anyhow::Result<Self> {
         let var = |key: &'static str| lookup(key).with_context(|| format!("{key} is not set"));
 

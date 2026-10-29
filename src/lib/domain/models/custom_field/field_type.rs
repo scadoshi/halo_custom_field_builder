@@ -1,3 +1,5 @@
+//! Halo's field types, their input types and selection options.
+
 pub mod input_types;
 use thiserror::Error;
 
@@ -5,44 +7,74 @@ use crate::domain::models::custom_field::field_type::input_types::date_input_typ
 use crate::domain::models::custom_field::field_type::input_types::single_select_input_type::SingleSelectInputType;
 use crate::domain::models::custom_field::field_type::input_types::text_input_type::TextInputType;
 
+/// Why the type columns or the options are not a valid field type.
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum ParseFieldTypeError {
+    /// No field type has this id.
     #[error("field_type_id {0} is not a field type")]
     InvalidFieldTypeId(u8),
+    /// The field type has no input type with this id.
     #[error("input_type_id {input_type_id} is not an input type of field_type_id {field_type_id}")]
     InvalidInputType {
+        /// The field type asked for.
         field_type_id: u8,
+        /// The input type it doesn't have.
         input_type_id: u8,
     },
+    /// An option is empty once trimmed.
     #[error("selection_options cannot hold an empty option")]
     EmptyOption,
+    /// Options were given for a type that takes none.
     #[error("selection_options are only for field_type_id 2 and 3, not {0}")]
     OptionsWithoutSelection(u8),
+    /// A selection type was given no options.
     #[error("selection_options cannot be empty for field_type_id {0}")]
     SelectionWithoutOptions(u8),
 }
 
+/// A Halo field type with its input type and options. The selection types
+/// always hold at least one option, each trimmed and not empty.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum FieldType {
+    /// A single line of text, `field_type_id` 0.
     Text {
+        /// What the text may hold.
         input_type: TextInputType,
     },
+    /// Multi-line text, `field_type_id` 1.
     Memo,
+    /// One choice from a list, `field_type_id` 2.
     SingleSelect {
+        /// How the list is shown.
         input_type: SingleSelectInputType,
+        /// The choices.
         selection_options: Vec<String>,
     },
+    /// Any number of choices from a list, `field_type_id` 3.
     MultiSelect {
+        /// The choices.
         selection_options: Vec<String>,
     },
+    /// A date, `field_type_id` 4.
     Date {
+        /// Date alone or date and time.
         input_type: DateInputType,
     },
+    /// A time of day, `field_type_id` 5.
     Time,
+    /// A checkbox, `field_type_id` 6.
     Checkbox,
+    /// Rich text, `field_type_id` 10.
     Rich,
 }
 impl FieldType {
+    /// The field type for these ids and options. A missing `input_type_id`
+    /// means 0; types without input types ignore it.
+    ///
+    /// # Errors
+    ///
+    /// Fails when either id is unknown for the type, an option is empty, or
+    /// options are missing from a selection type or given to any other.
     pub fn new(
         field_type_id: u8,
         input_type_id: Option<u8>,
@@ -89,6 +121,7 @@ impl FieldType {
         }
     }
 
+    /// The input type's id, or `None` for a type without input types.
     pub fn input_type_id(&self) -> Option<u8> {
         match self {
             FieldType::Text { input_type } => Some(input_type.input_type_id()),
@@ -102,6 +135,7 @@ impl FieldType {
         }
     }
 
+    /// The options of a selection type, or `None` for any other.
     pub fn selection_options(&self) -> Option<&[String]> {
         match self {
             FieldType::SingleSelect {
@@ -125,6 +159,7 @@ impl FieldType {
         })
     }
 
+    /// The id Halo uses for this type.
     pub fn field_type_id(&self) -> u8 {
         match self {
             FieldType::Text { .. } => 0,

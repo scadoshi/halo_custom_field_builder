@@ -1,3 +1,5 @@
+//! Logging to the terminal and to one file per run under `logs/`.
+
 use std::fs;
 use std::fs::OpenOptions;
 use std::path::Path;
@@ -16,6 +18,13 @@ const MAX_LOG_COUNT: usize = 100;
 /// Logs cleanup keeps, leaving room for the one the run creates next.
 const KEPT_BEFORE_RUN: usize = MAX_LOG_COUNT.saturating_sub(1);
 
+/// Deletes old logs, then logs to the terminal and to a new file under
+/// `logs/` named for the start time.
+///
+/// # Errors
+///
+/// Fails when `logs/` can't be created or read, the log file can't be
+/// opened, or a logger is already set.
 pub fn setup_logging() -> anyhow::Result<()> {
     let logs_dir = Path::new("logs");
     fs::create_dir_all(logs_dir).context("failed to create logs directory")?;

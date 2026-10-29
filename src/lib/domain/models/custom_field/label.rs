@@ -1,3 +1,5 @@
+//! The label users see on a field.
+
 use std::fmt::Display;
 
 use thiserror::Error;
@@ -5,18 +7,27 @@ use thiserror::Error;
 /// The most characters Halo takes in a label.
 const MAX_LEN: usize = 256;
 
+/// Why a label is invalid.
 #[derive(Debug, Error)]
 pub enum ParseLabelError {
+    /// Nothing is left once trimmed.
     #[error("cannot be empty")]
     Empty,
+    /// Too many characters once trimmed.
     #[error("cannot be longer than {} characters", MAX_LEN)]
     TooLong,
 }
 
+/// A trimmed label of 1 to 256 characters.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Label(String);
 
 impl Label {
+    /// The label, trimmed.
+    ///
+    /// # Errors
+    ///
+    /// Fails when the trimmed label is empty or longer than 256 characters.
     pub fn new(label: &str) -> Result<Self, ParseLabelError> {
         let trimmed = label.trim();
         if trimmed.is_empty() {

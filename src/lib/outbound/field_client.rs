@@ -1,3 +1,5 @@
+//! Creates fields through Halo's `fieldinfo` endpoint.
+
 use std::time::Duration;
 
 use anyhow::Context;
@@ -14,6 +16,7 @@ use crate::outbound::http_custom_field::HttpCustomField;
 /// minutes; this caps the program at 120 a minute.
 const REQUEST_DELAY: Duration = Duration::from_millis(500);
 
+/// Creates fields in Halo, one request at a time, at most two a second.
 #[derive(Debug)]
 pub struct FieldClient {
     /// Halo's field creation endpoint.
@@ -23,6 +26,7 @@ pub struct FieldClient {
 }
 
 impl FieldClient {
+    /// A client for the API in `config` that authenticates with `auth_client`.
     pub fn new(config: &Config, auth_client: AuthClient) -> Self {
         Self {
             endpoint: format!("{}/fieldinfo", config.api_url),
@@ -31,6 +35,12 @@ impl FieldClient {
         }
     }
 
+    /// Waits 500 ms, then creates the field.
+    ///
+    /// # Errors
+    ///
+    /// Fails when no token can be had, the request can't be sent, or Halo
+    /// answers with an error status (the message holds the status and body).
     pub async fn create_field(&mut self, custom_field: &CustomField) -> anyhow::Result<()> {
         time::sleep(REQUEST_DELAY).await;
 

@@ -1,3 +1,5 @@
+//! A custom field built from one CSV row.
+
 pub mod field_type;
 pub mod label;
 pub mod name;
@@ -8,23 +10,37 @@ use crate::domain::models::custom_field::field_type::{FieldType, ParseFieldTypeE
 use crate::domain::models::custom_field::label::{Label, ParseLabelError};
 use crate::domain::models::custom_field::name::{Name, ParseNameError};
 
+/// Why a row is not a valid custom field. Each message starts with the column at fault.
 #[derive(Error, Debug)]
 pub enum InvalidCustomField {
+    /// The `name` column is invalid.
     #[error("name {0}")]
     Name(#[from] ParseNameError),
+    /// The `label` column is invalid.
     #[error("label {0}")]
     Label(#[from] ParseLabelError),
+    /// The type columns or the options are invalid.
     #[error(transparent)]
     FieldType(#[from] ParseFieldTypeError),
 }
 
+/// One field to create, validated.
 #[derive(Debug, Clone)]
 pub struct CustomField {
+    /// The internal name.
     pub name: Name,
+    /// What users see.
     pub label: Label,
+    /// The type, input type and options.
     pub field_type: FieldType,
 }
 impl CustomField {
+    /// A field from a row's cells. `selection_options` is split on commas.
+    ///
+    /// # Errors
+    ///
+    /// Fails when the name, label, type ids or options are invalid, as
+    /// [`InvalidCustomField`] names.
     pub fn new(
         name: &str,
         label: &str,
