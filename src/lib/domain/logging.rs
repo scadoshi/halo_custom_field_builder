@@ -4,12 +4,10 @@ use std::path::Path;
 
 use anyhow::Context;
 use chrono::{DateTime, Duration, Local};
-use log::{LevelFilter, error, info};
+use log::LevelFilter;
 use simplelog::{
     ColorChoice, CombinedLogger, ConfigBuilder, TermLogger, TerminalMode, WriteLogger,
 };
-
-use crate::domain::import_result::ImportResults;
 
 const MAX_LOG_AGE: i64 = 7;
 const MAX_LOG_COUNT: usize = 100;
@@ -92,41 +90,6 @@ fn cleanup_old_logs(logs_dir: &Path) -> anyhow::Result<()> {
         }
     }
 
-    Ok(())
-}
-
-#[allow(dead_code)]
-fn format_bytes(bytes: u64) -> String {
-    const KB: u64 = 1024;
-    const MB: u64 = KB * 1024;
-    const GB: u64 = MB * 1024;
-
-    if bytes >= GB {
-        format!("{:.2} GB", bytes as f64 / GB as f64)
-    } else if bytes >= MB {
-        format!("{:.2} MB", bytes as f64 / MB as f64)
-    } else if bytes >= KB {
-        format!("{:.2} KB", bytes as f64 / KB as f64)
-    } else {
-        format!("{} bytes", bytes)
-    }
-}
-
-#[allow(dead_code)]
-pub fn log_import_result(result: &ImportResults) -> anyhow::Result<()> {
-    info!("\n{}", "=".repeat(80));
-    info!("import results summary");
-    info!("{}", "=".repeat(80));
-
-    for label in &result.successful {
-        info!("✓ successfully imported: {label}");
-    }
-
-    for failure in &result.failed {
-        error!("✗ failed to import: {} ({})", failure.label, failure.error);
-    }
-
-    info!("\n{}", "=".repeat(80));
     Ok(())
 }
 
