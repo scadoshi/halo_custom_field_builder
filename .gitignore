@@ -1,6 +1,5 @@
 /target
 .env
-Cargo.lock
 logs/
 .vscode
 
